@@ -5,7 +5,7 @@ threads threads_count, threads_count
 environment ENV.fetch('RAILS_ENV') { 'development' }
 workers     ENV.fetch('WEB_CONCURRENCY') { 2 }
 
-bind 'tcp://[::0]:3000'
+bind 'tcp://[::1]:3000'
 
 preload_app!
 
