@@ -28,7 +28,7 @@ const en = {
   "column_back_button.label": "Back",
   "column.blocks": "Blocked users",
   "column.community": "The café",
-  "column.favourites": "Sugars",
+  "column.favourites": "Sweetened servings",
   "column.follow_requests": "Follow requests",
   "column.home": "Counter",
   "column.mutes": "Muted users",
