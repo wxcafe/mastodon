@@ -89,7 +89,7 @@ const fr = {
   "upload_area.title": "Glissez et déposez pour envoyer",
   "notification.follow": "{name} vous suit.",
   "notification.favourite": "{name} a sucré votre tasse :",
-  "notification.reblog": "{name} a touillé votre tasse:",
+  "notification.reblog": "{name} a touillé votre tasse :",
   "notification.mention": "{name} vous a offert une tasse :",
   "notifications.column_settings.alert": "Commandes locales",
   "notifications.column_settings.show": "Afficher dans la colonne",
