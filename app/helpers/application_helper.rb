@@ -9,8 +9,12 @@ module ApplicationHelper
     !user_signed_in? && !single_user_mode?
   end
 
+  def open_registrations?
+    Setting.open_registrations
+  end
+
   def add_rtl_body_class(other_classes)
-    other_classes = "#{other_classes} rtl" if [:ar, :fa].include?(I18n.locale)
+    other_classes = "#{other_classes} rtl" if [:ar, :fa, :he].include?(I18n.locale)
     other_classes
   end
 
@@ -21,5 +25,9 @@ module ApplicationHelper
 
   def title
     Rails.env.production? ? site_title : "#{site_title} (Dev)"
+  end
+
+  def fa_icon(icon)
+    content_tag(:i, nil, class: 'fa ' + icon.split(' ').map { |cl| "fa-#{cl}" }.join(' '))
   end
 end
