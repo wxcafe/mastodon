@@ -131,27 +131,15 @@
   "getting_started.userguide": "Guide d'utilisation",
   "home.column_settings.advanced": "Avancé",
   "home.column_settings.basic": "Basique",
-  "home.column_settings.filter_regex": "Filtrer avec une expression rationnelle",
-  "home.column_settings.show_reblogs": "Afficher les partages",
-  "home.column_settings.show_replies": "Afficher les réponses",
   "home.settings": "Paramètres de la colonne",
   "lightbox.close": "Fermer",
   "loading_indicator.label": "Chargement…",
   "media_gallery.toggle_visible": "Modifier la visibilité",
   "missing_indicator.label": "Non trouvé",
   "navigation_bar.blocks": "Comptes bloqués",
-  "navigation_bar.community_timeline": "Fil public local",
-  "navigation_bar.edit_profile": "Modifier le profil",
-  "navigation_bar.favourites": "Favoris",
-  "navigation_bar.follow_requests": "Demandes de suivi",
-  "navigation_bar.info": "Plus d’informations",
-  "navigation_bar.logout": "Déconnexion",
-  "navigation_bar.mutes": "Comptes silencés",
->>>>>>> v1.4.1:app/javascript/mastodon/locales/fr.json
   "navigation_bar.preferences": "Préférences",
   "navigation_bar.community_timeline": "Le Café",
   "navigation_bar.public_timeline": "La Terrasse",
-  "navigation_bar.blocks": "Utilisateurs bloqués",
   "navigation_bar.favourites": "Tasses Sucrées",
   "navigation_bar.info": "Plus d'informations",
   "navigation_bar.logout": "Fin du service",
@@ -168,22 +156,10 @@
   "upload_progress.label": "Envoi en cours…",
   "upload_area.title": "Glissez et déposez pour envoyer",
   "notification.follow": "{name} vous suit.",
-<<<<<<< HEAD:app/assets/javascripts/components/locales/fr.jsx
   "notification.favourite": "{name} a sucré votre tasse :",
   "notification.reblog": "{name} a touillé votre tasse :",
   "notification.mention": "{name} vous a offert une tasse :",
   "notifications.column_settings.alert": "Commandes locales",
-=======
-  "notification.mention": "{name} vous a mentionné⋅e :",
-  "notification.reblog": "{name} a partagé votre statut :",
-  "notifications.clear": "Nettoyer",
-  "notifications.clear_confirmation": "Voulez-vous vraiment supprimer toutes vos notifications ?",
-  "notifications.column_settings.alert": "Notifications locales",
-  "notifications.column_settings.favourite": "Favoris :",
-  "notifications.column_settings.follow": "Nouveaux abonné⋅e⋅s :",
-  "notifications.column_settings.mention": "Mentions :",
-  "notifications.column_settings.reblog": "Partages :",
->>>>>>> v1.4.1:app/javascript/mastodon/locales/fr.json
   "notifications.column_settings.show": "Afficher dans la colonne",
   "notifications.column_settings.sound": "Émettre un son",
   "notifications.column_settings.follow": "Nouveaux consommateurs :",
@@ -193,7 +169,6 @@
   "notifications.clear": "Nettoyer",
   "notifications.clear_confirmation": "Voulez-vous vraiment annuler toutes vos commandes ?",
   "notifications.settings": "Paramètres de la colonne",
-<<<<<<< HEAD:app/assets/javascripts/components/locales/fr.jsx
   "privacy.public.short": "Public",
   "privacy.public.long": "Afficher dans le café et sur la terrasse",
   "privacy.unlisted.short": "Non-listé",
@@ -220,9 +195,7 @@
   "account.requested": "Invitation envoyée",
   "account.unmute": "Ne plus masquer",
   "column.blocks": "Comptes bloqués",
-=======
   "onboarding.done": "Effectué",
->>>>>>> v1.4.1:app/javascript/mastodon/locales/fr.json
   "onboarding.next": "Suivant",
   "onboarding.page_five.public_timelines": "Le fil public global affiche les posts de tou⋅te⋅s les utilisateurs⋅trices suivi⋅es par les membres de {domain}. Le fil public local est identique mais se limite aux utilisateurs⋅trices de {domain}.",
   "onboarding.page_four.home": "L’Accueil affiche les posts de tou⋅te⋅s les utilisateurs⋅trices que vous suivez",
@@ -242,11 +215,6 @@
   "onboarding.page_three.search": "Utilisez la barre de recherche pour trouver des utilisateurs⋅trices et regarder des hashtags tels que {illustration} et {introductions}. Pour trouver quelqu’un qui n’est pas sur cette instance, utilisez son nom d’utilisateur⋅trice complet.",
   "onboarding.page_two.compose": "Écrivez depuis la colonne de composition. Vous pouvez ajouter des images, changer les réglages de confidentialité, et ajouter des avertissements de contenu (Content Warning) grâce aux icônes en dessous.",
   "onboarding.skip": "Passer",
-<<<<<<< HEAD:app/assets/javascripts/components/locales/fr.jsx
-};
-
-export default fr;
-=======
   "privacy.change": "Ajuster la confidentialité du message",
   "privacy.direct.long": "N’afficher que pour les personnes mentionnées",
   "privacy.direct.short": "Direct",
