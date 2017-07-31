@@ -155,6 +155,8 @@
   "home.column_settings.basic": "Basique",
   "home.settings": "Paramètres de la colonne",
   "lightbox.close": "Fermer",
+  "lightbox.next": "Next",
+  "lightbox.previous": "Previous",
   "loading_indicator.label": "Chargement…",
   "media_gallery.toggle_visible": "Modifier la visibilité",
   "missing_indicator.label": "Non trouvé",
