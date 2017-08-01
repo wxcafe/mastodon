@@ -1,4 +1,4 @@
-threads_count = ENV.fetch('MAX_THREADS') { 12 }.to_i
+threads_count = ENV.fetch('MAX_THREADS') { 6 }.to_i
 threads threads_count, threads_count
 
 if ENV['SOCKET'] then
@@ -8,7 +8,7 @@ else
 end
 
 environment ENV.fetch('RAILS_ENV') { 'development' }
-workers     ENV.fetch('WEB_CONCURRENCY') { 1 }
+workers     ENV.fetch('WEB_CONCURRENCY') { 3 }
 
 preload_app!
 
