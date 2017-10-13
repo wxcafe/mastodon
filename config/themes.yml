@@ -1,1 +1,3 @@
 default: styles/application.scss
+testing: styles/wxcafe.scss
+win95: style/win95.scss
