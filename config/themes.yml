@@ -1,3 +1,5 @@
 default: styles/application.scss
-testing: styles/wxcafe.scss
-win95: style/win95.scss
+paris: styles/paris.scss
+wxcafe: styles/wxcafe.scss
+win95: styles/win95.scss
+cybre: styles/cybre.scss

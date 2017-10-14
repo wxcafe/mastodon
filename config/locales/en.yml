@@ -591,8 +591,10 @@ en:
     title: "%{instance} Terms of Service and Privacy Policy"
   themes:
     default: "Mastodon"
-    testing: "testing"
+    wxcafe: "Wxcafé"
+    paris: "Paris"
     win95: "Windows 95"
+    cybre: "Cybre"
   time:
     formats:
       default: "%b %d, %Y, %H:%M"
