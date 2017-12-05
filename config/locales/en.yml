@@ -593,6 +593,7 @@ en:
     paris: "Paris"
     win95: "Windows 95"
     cybre: "Cybre"
+    masto_light: "Mastodon Light"
   time:
     formats:
       default: "%b %d, %Y, %H:%M"
