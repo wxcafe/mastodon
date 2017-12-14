@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { changeListEditorTitle, submitListEditor, resetListEditor } from '../../../actions/lists';
+import { changeListEditorTitle, submitListEditor } from '../../../actions/lists';
 import IconButton from '../../../components/icon_button';
 import { defineMessages, injectIntl } from 'react-intl';
 
@@ -17,10 +17,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
   onChange: value => dispatch(changeListEditorTitle(value)),
-  onSubmit: () => {
-    dispatch(submitListEditor());
-    dispatch(resetListEditor());
-  },
+  onSubmit: () => dispatch(submitListEditor(true)),
 });
 
 @connect(mapStateToProps, mapDispatchToProps)
@@ -39,10 +36,9 @@ export default class NewListForm extends React.PureComponent {
     this.props.onChange(e.target.value);
   }
 
-  handleKeyUp = e => {
-    if (e.keyCode === 13) {
-      this.props.onSubmit();
-    }
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.onSubmit();
   }
 
   handleClick = () => {
@@ -56,7 +52,7 @@ export default class NewListForm extends React.PureComponent {
     const title = intl.formatMessage(messages.title);
 
     return (
-      <div className='column-inline-form'>
+      <form className='column-inline-form' onSubmit={this.handleSubmit}>
         <label>
           <span style={{ display: 'none' }}>{label}</span>
 
@@ -65,7 +61,6 @@ export default class NewListForm extends React.PureComponent {
             value={value}
             disabled={disabled}
             onChange={this.handleChange}
-            onKeyUp={this.handleKeyUp}
             placeholder={label}
           />
         </label>
@@ -76,7 +71,7 @@ export default class NewListForm extends React.PureComponent {
           title={title}
           onClick={this.handleClick}
         />
-      </div>
+      </form>
     );
   }
 

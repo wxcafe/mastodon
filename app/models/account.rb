@@ -184,6 +184,21 @@ class Account < ApplicationRecord
     @keypair ||= OpenSSL::PKey::RSA.new(private_key || public_key)
   end
 
+  def magic_key
+    modulus, exponent = [keypair.public_key.n, keypair.public_key.e].map do |component|
+      result = []
+
+      until component.zero?
+        result << [component % 256].pack('C')
+        component >>= 8
+      end
+
+      result.reverse.join
+    end
+
+    (['RSA'] + [modulus, exponent].map { |n| Base64.urlsafe_encode64(n) }).join('.')
+  end
+
   def subscription(webhook_url)
     @subscription ||= OStatus2::Subscription.new(remote_url, secret: secret, webhook: webhook_url, hub: hub_url)
   end
@@ -270,6 +285,7 @@ class Account < ApplicationRecord
         FROM accounts
         WHERE #{query} @@ #{textsearch}
           AND accounts.suspended = false
+          AND accounts.moved_to_account_id IS NULL
         ORDER BY rank DESC
         LIMIT ?
       SQL
@@ -295,6 +311,7 @@ class Account < ApplicationRecord
           WHERE accounts.id IN (SELECT * FROM first_degree)
             AND #{query} @@ #{textsearch}
             AND accounts.suspended = false
+            AND accounts.moved_to_account_id IS NULL
           GROUP BY accounts.id
           ORDER BY rank DESC
           LIMIT ?
@@ -310,6 +327,7 @@ class Account < ApplicationRecord
           LEFT OUTER JOIN follows AS f ON (accounts.id = f.account_id AND f.target_account_id = ?) OR (accounts.id = f.target_account_id AND f.account_id = ?)
           WHERE #{query} @@ #{textsearch}
             AND accounts.suspended = false
+            AND accounts.moved_to_account_id IS NULL
           GROUP BY accounts.id
           ORDER BY rank DESC
           LIMIT ?
