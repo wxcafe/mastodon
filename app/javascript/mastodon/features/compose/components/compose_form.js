@@ -156,6 +156,10 @@ export default class ComposeForm extends ImmutablePureComponent {
 
     return (
       <div className='compose-form'>
+        <WarningContainer />
+
+        <Collapsable isVisible={this.props.spoiler} fullHeight={50}>
+          <div className='spoiler-input'>
         <Collapsable isVisible={this.props.spoiler || text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "_").length > 1000} fullHeight={50}>
           <div className="spoiler-input">
             <label>
@@ -164,8 +168,6 @@ export default class ComposeForm extends ImmutablePureComponent {
             </label>
           </div>
         </Collapsable>
-
-        <WarningContainer />
 
         <ReplyIndicatorContainer />
 
@@ -199,6 +201,8 @@ export default class ComposeForm extends ImmutablePureComponent {
             <SensitiveButtonContainer />
             <SpoilerButtonContainer />
           </div>
+          <div className='character-counter__wrapper'><CharacterCounter max={500} text={text} /></div>
+        </div>
 
           <div className='compose-form__publish'>
             <div className='character-counter__wrapper'><CharacterCounter max={10000} text={text} /></div>
