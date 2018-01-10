@@ -11,3 +11,28 @@ $base-shadow-color: #232323;
 $base-overlay-background: #232323;
 
 @import 'application';
+
+.drawer__inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: lighten($ui-base-color, 13%) url('../images/wave-drawer.png') no-repeat bottom / 100% auto;
+  box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+
+  &.darker {
+    background: $ui-base-color;
+  }
+
+  > .mastodon {
+    background: url('../images/mastodon-ui.png') no-repeat left bottom / contain;
+    flex: 1;
+  }
+}
+
