@@ -1,4 +1,4 @@
-FROM ruby:2.4.2-alpine3.6
+FROM ruby:2.5.0-alpine3.7
 
 LABEL maintainer="https://github.com/tootsuite/mastodon" \
       description="A GNU Social-compatible microblogging server"
@@ -40,6 +40,7 @@ RUN apk -U upgrade \
     protobuf \
     su-exec \
     tini \
+    tzdata \
  && update-ca-certificates \
  && mkdir -p /tmp/src /opt \
  && wget -O yarn.tar.gz "https://github.com/yarnpkg/yarn/releases/download/v$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz" \
@@ -61,6 +62,9 @@ RUN apk -U upgrade \
  && rm -rf /tmp/* /var/cache/apk/*
 
 COPY Gemfile Gemfile.lock package.json yarn.lock .yarnclean /mastodon/
+COPY stack-fix.c /lib
+RUN gcc -shared -fPIC /lib/stack-fix.c -o /lib/stack-fix.so
+RUN rm /lib/stack-fix.c
 
 RUN bundle config build.nokogiri --with-iconv-lib=/usr/local/lib --with-iconv-include=/usr/local/include \
  && bundle install -j$(getconf _NPROCESSORS_ONLN) --deployment --without test development \

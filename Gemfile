@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
-ruby '>= 2.3.0', '< 2.5.0'
+ruby '>= 2.3.0', '< 2.6.0'
 
 gem 'pkg-config', '~> 1.2'
 
@@ -9,8 +9,7 @@ gem 'puma', '~> 3.10'
 gem 'rails', '~> 5.1.4'
 gem 'uglifier', '~> 3.2'
 
-gem 'hamlit-rails', '~> 0.2', platforms: [:ruby, :mswin]
-gem 'haml-rails', '~> 1.0', platform: :jruby
+gem 'hamlit-rails', '~> 0.2'
 gem 'pg', '~> 0.20'
 gem 'pghero', '~> 1.7'
 gem 'dotenv-rails', '~> 2.2'
@@ -21,6 +20,7 @@ gem 'fog-local', '~> 0.4', require: false
 gem 'fog-openstack', '~> 0.1', require: false
 gem 'paperclip', '~> 5.1'
 gem 'paperclip-av-transcoder', '~> 0.6'
+gem 'posix-spawn'
 
 gem 'active_model_serializers', '~> 0.10'
 gem 'addressable', '~> 2.5'
@@ -29,18 +29,18 @@ gem 'browser'
 gem 'charlock_holmes', '~> 0.7.5'
 gem 'iso-639'
 gem 'cld3', '~> 3.2.0'
-gem 'devise', '~> 4.3'
+gem 'devise', '~> 4.4'
 gem 'devise-two-factor', '~> 3.0'
 gem 'doorkeeper', '~> 4.2'
-gem 'fast_blank', '~> 1.0', platforms: [:ruby, :mswin]
-gem 'goldfinger', '~> 2.0'
+gem 'fast_blank', '~> 1.0'
+gem 'goldfinger', '~> 2.1'
 gem 'hiredis', '~> 0.6'
 gem 'redis-namespace', '~> 1.5'
 gem 'htmlentities', '~> 4.3'
-gem 'http', '~> 2.2'
+gem 'http', '~> 3.0'
 gem 'http_accept_language', '~> 2.1'
 gem 'httplog', '~> 0.99'
-gem 'idn-ruby', require: 'idn', platforms: [:ruby, :mswin]
+gem 'idn-ruby', require: 'idn'
 gem 'kaminari', '~> 1.1'
 gem 'link_header', '~> 0.0'
 gem 'mime-types', '~> 3.1'
@@ -50,6 +50,7 @@ gem 'oj', '~> 3.3'
 gem 'ostatus2', '~> 2.0'
 gem 'ox', '~> 2.8'
 gem 'pundit', '~> 1.1'
+gem 'premailer-rails'
 gem 'rack-attack', '~> 5.0'
 gem 'rack-cors', '~> 0.4', require: 'rack/cors'
 gem 'rack-timeout', '~> 0.4'
@@ -101,7 +102,7 @@ group :development do
   gem 'active_record_query_trace', '~> 1.5'
   gem 'annotate', '~> 2.7'
   gem 'better_errors', '~> 2.4'
-  gem 'binding_of_caller', '~> 0.7', platforms: [:ruby, :mswin]
+  gem 'binding_of_caller', '~> 0.7'
   gem 'bullet', '~> 5.5'
   gem 'letter_opener', '~> 1.4'
   gem 'letter_opener_web', '~> 1.3'
