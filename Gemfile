@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
-ruby '>= 2.3.0', '< 2.5.0'
+ruby '>= 2.3.0', '< 2.6.0'
 
 gem 'pkg-config', '~> 1.2'
 
@@ -20,6 +20,7 @@ gem 'fog-local', '~> 0.4', require: false
 gem 'fog-openstack', '~> 0.1', require: false
 gem 'paperclip', '~> 5.1'
 gem 'paperclip-av-transcoder', '~> 0.6'
+gem 'posix-spawn'
 
 gem 'active_model_serializers', '~> 0.10'
 gem 'addressable', '~> 2.5'
@@ -28,15 +29,15 @@ gem 'browser'
 gem 'charlock_holmes', '~> 0.7.5'
 gem 'iso-639'
 gem 'cld3', '~> 3.2.0'
-gem 'devise', '~> 4.3'
+gem 'devise', '~> 4.4'
 gem 'devise-two-factor', '~> 3.0'
 gem 'doorkeeper', '~> 4.2'
 gem 'fast_blank', '~> 1.0'
-gem 'goldfinger', '~> 2.0'
+gem 'goldfinger', '~> 2.1'
 gem 'hiredis', '~> 0.6'
 gem 'redis-namespace', '~> 1.5'
 gem 'htmlentities', '~> 4.3'
-gem 'http', '~> 2.2'
+gem 'http', '~> 3.0'
 gem 'http_accept_language', '~> 2.1'
 gem 'httplog', '~> 0.99'
 gem 'idn-ruby', require: 'idn'
@@ -49,6 +50,7 @@ gem 'oj', '~> 3.3'
 gem 'ostatus2', '~> 2.0'
 gem 'ox', '~> 2.8'
 gem 'pundit', '~> 1.1'
+gem 'premailer-rails'
 gem 'rack-attack', '~> 5.0'
 gem 'rack-cors', '~> 0.4', require: 'rack/cors'
 gem 'rack-timeout', '~> 0.4'
