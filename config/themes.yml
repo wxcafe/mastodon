@@ -1,6 +1,6 @@
-default: styles/application.scss
+#default: styles/application.scss
 #masto_light: styles/mastodon_light.scss
-paris: styles/paris.scss
-wxcafe: styles/wxcafe.scss
-win95: styles/win95.scss
-cybre: styles/cybre.scss
+#paris: styles/paris.scss
+#wxcafe: styles/wxcafe.scss
+#win95: styles/win95.scss
+#cybre: styles/cybre.scss

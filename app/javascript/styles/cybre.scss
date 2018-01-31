@@ -9,12 +9,12 @@ $about-page-text: lighten($ui-base-color, 50%);
 @import 'application';
 
 body, body.about-body {
-  background: $ui-base-color url('../images/background-cybre.png');
+  background: $ui-base-color url('~images/background-cybre.png');
 }
 
 body.about-body {
   // basics.scss &.about-body
-  background: darken($ui-base-color, 8%) url('../images/background-cybre.png');
+  background: darken($ui-base-color, 8%) url('~images/background-cybre.png');
 
   background-position-y: 60px;
   background-position-x: center;
@@ -75,13 +75,13 @@ body.about-body {
 }
 
 .column .static-content.getting-started {
-  background-image: url('../images/logo-cybre.png'), url('../images/background-cybre.png');
+  background-image: url('~images/logo-cybre.png'), url('~images/background-cybre.png');
   background-position: 50% 50%;
   background-size:cover;
 }
 
 .columns-area {
-  background: $ui-base-color url('../images/background-cybre.png');
+  background: $ui-base-color url('~images/background-cybre.png');
 }
 
 .drawer .drawer__inner {
@@ -154,7 +154,7 @@ body.about-body {
 
 .landing-page .header-wrapper,
 .landing-page .header-wrapper.compact {
-    background-image:url('../images/header-cybre.jpeg');
+    background-image:url('~images/header-cybre.jpeg');
     background-size:cover;
     background-position:50% 50%;
 }
@@ -167,7 +167,7 @@ body.about-body {
     .hero .floats {
         .float-1, .float-2, .float-3 {
             opacity:0.4;
-            background-image:url('../images/floppy-1.svg');
+            background-image:url('~images/floppy-1.svg');
         }
 
         .float-1 {
