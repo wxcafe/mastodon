@@ -15,7 +15,9 @@ class ActivityPub::Activity::Announce < ActivityPub::Activity
       account: @account,
       reblog: original_status,
       uri: @json['id'],
-      created_at: @options[:override_timestamps] ? nil : @json['published']
+      created_at: @json['published'],
+      override_timestamps: @options[:override_timestamps],
+      visibility: original_status.visibility
     )
 
     distribute(status)
@@ -35,6 +37,6 @@ class ActivityPub::Activity::Announce < ActivityPub::Activity
   end
 
   def announceable?(status)
-    status.public_visibility? || status.unlisted_visibility?
+    status.account_id == @account.id || status.public_visibility? || status.unlisted_visibility?
   end
 end

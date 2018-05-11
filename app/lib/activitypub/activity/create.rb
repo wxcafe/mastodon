@@ -20,13 +20,12 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
   private
 
   def process_status
-    media_attachments = process_attachments
+    status_params = process_status_params
 
     ApplicationRecord.transaction do
       @status = Status.create!(status_params)
 
       process_tags(@status)
-      attach_media(@status, media_attachments)
     end
 
     resolve_thread(@status)
@@ -40,7 +39,7 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
     status
   end
 
-  def status_params
+  def process_status_params
     {
       uri: @object['id'],
       url: object_url || @object['id'],
@@ -48,12 +47,14 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
       text: text_from_content || '',
       language: detected_language,
       spoiler_text: @object['summary'] || '',
-      created_at: @options[:override_timestamps] ? nil : @object['published'],
+      created_at: @object['published'],
+      override_timestamps: @options[:override_timestamps],
       reply: @object['inReplyTo'].present?,
       sensitive: @object['sensitive'] || false,
       visibility: visibility_from_audience,
       thread: replied_to_status,
       conversation: conversation_from_uri(@object['conversation']),
+      media_attachment_ids: process_attachments.take(4).map(&:id),
     }
   end
 
@@ -61,12 +62,11 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
     return if @object['tag'].nil?
 
     as_array(@object['tag']).each do |tag|
-      case tag['type']
-      when 'Hashtag'
+      if equals_or_includes?(tag['type'], 'Hashtag')
         process_hashtag tag, status
-      when 'Mention'
+      elsif equals_or_includes?(tag['type'], 'Mention')
         process_mention tag, status
-      when 'Emoji'
+      elsif equals_or_includes?(tag['type'], 'Emoji')
         process_emoji tag, status
       end
     end
@@ -79,6 +79,8 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
     hashtag = Tag.where(name: hashtag).first_or_initialize(name: hashtag)
 
     status.tags << hashtag
+  rescue ActiveRecord::RecordInvalid
+    nil
   end
 
   def process_mention(tag, status)
@@ -108,18 +110,18 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
   end
 
   def process_attachments
-    return if @object['attachment'].nil?
+    return [] if @object['attachment'].nil?
 
     media_attachments = []
 
     as_array(@object['attachment']).each do |attachment|
-      next if unsupported_media_type?(attachment['mediaType']) || attachment['url'].blank?
+      next if attachment['url'].blank?
 
       href             = Addressable::URI.parse(attachment['url']).normalize.to_s
-      media_attachment = MediaAttachment.create(account: @account, remote_url: href, description: attachment['name'].presence)
+      media_attachment = MediaAttachment.create(account: @account, remote_url: href, description: attachment['name'].presence, focus: attachment['focalPoint'])
       media_attachments << media_attachment
 
-      next if skip_download?
+      next if unsupported_media_type?(attachment['mediaType']) || skip_download?
 
       media_attachment.file_remote_url = href
       media_attachment.save
@@ -130,13 +132,6 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
     Rails.logger.debug e
 
     media_attachments
-  end
-
-  def attach_media(status, media_attachments)
-    return if media_attachments.blank?
-
-    media = MediaAttachment.where(status_id: nil, id: media_attachments.take(4).map(&:id))
-    media.update(status_id: status.id)
   end
 
   def resolve_thread(status)
@@ -240,11 +235,11 @@ class ActivityPub::Activity::Create < ActivityPub::Activity
   end
 
   def supported_object_type?
-    SUPPORTED_TYPES.include?(@object['type'])
+    equals_or_includes_any?(@object['type'], SUPPORTED_TYPES)
   end
 
   def converted_object_type?
-    CONVERTED_TYPES.include?(@object['type'])
+    equals_or_includes_any?(@object['type'], CONVERTED_TYPES)
   end
 
   def skip_download?

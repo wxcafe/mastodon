@@ -1,8 +1,10 @@
+import { debounce } from 'lodash';
 import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import PropTypes from 'prop-types';
 import StatusContainer from '../containers/status_container';
 import ImmutablePureComponent from 'react-immutable-pure-component';
+import LoadGap from './load_gap';
 import ScrollableList from './scrollable_list';
 import { FormattedMessage } from 'react-intl';
 
@@ -11,7 +13,8 @@ export default class StatusList extends ImmutablePureComponent {
   static propTypes = {
     scrollKey: PropTypes.string.isRequired,
     statusIds: ImmutablePropTypes.list.isRequired,
-    onScrollToBottom: PropTypes.func,
+    featuredStatusIds: ImmutablePropTypes.list,
+    onLoadMore: PropTypes.func,
     onScrollToTop: PropTypes.func,
     onScroll: PropTypes.func,
     trackScroll: PropTypes.bool,
@@ -27,15 +30,31 @@ export default class StatusList extends ImmutablePureComponent {
     trackScroll: true,
   };
 
-  handleMoveUp = id => {
-    const elementIndex = this.props.statusIds.indexOf(id) - 1;
+  getFeaturedStatusCount = () => {
+    return this.props.featuredStatusIds ? this.props.featuredStatusIds.size : 0;
+  }
+
+  getCurrentStatusIndex = (id, featured) => {
+    if (featured) {
+      return this.props.featuredStatusIds.indexOf(id);
+    } else {
+      return this.props.statusIds.indexOf(id) + this.getFeaturedStatusCount();
+    }
+  }
+
+  handleMoveUp = (id, featured) => {
+    const elementIndex = this.getCurrentStatusIndex(id, featured) - 1;
     this._selectChild(elementIndex);
   }
 
-  handleMoveDown = id => {
-    const elementIndex = this.props.statusIds.indexOf(id) + 1;
+  handleMoveDown = (id, featured) => {
+    const elementIndex = this.getCurrentStatusIndex(id, featured) + 1;
     this._selectChild(elementIndex);
   }
+
+  handleLoadOlder = debounce(() => {
+    this.props.onLoadMore(this.props.statusIds.last());
+  }, 300, { leading: true })
 
   _selectChild (index) {
     const element = this.node.node.querySelector(`article:nth-of-type(${index + 1}) .focusable`);
@@ -50,7 +69,7 @@ export default class StatusList extends ImmutablePureComponent {
   }
 
   render () {
-    const { statusIds, ...other }  = this.props;
+    const { statusIds, featuredStatusIds, onLoadMore, ...other }  = this.props;
     const { isLoading, isPartial } = other;
 
     if (isPartial) {
@@ -68,8 +87,15 @@ export default class StatusList extends ImmutablePureComponent {
       );
     }
 
-    const scrollableContent = (isLoading || statusIds.size > 0) ? (
-      statusIds.map((statusId) => (
+    let scrollableContent = (isLoading || statusIds.size > 0) ? (
+      statusIds.map((statusId, index) => statusId === null ? (
+        <LoadGap
+          key={'gap:' + statusIds.get(index + 1)}
+          disabled={isLoading}
+          maxId={index > 0 ? statusIds.get(index - 1) : null}
+          onClick={onLoadMore}
+        />
+      ) : (
         <StatusContainer
           key={statusId}
           id={statusId}
@@ -79,8 +105,20 @@ export default class StatusList extends ImmutablePureComponent {
       ))
     ) : null;
 
+    if (scrollableContent && featuredStatusIds) {
+      scrollableContent = featuredStatusIds.map(statusId => (
+        <StatusContainer
+          key={`f-${statusId}`}
+          id={statusId}
+          featured
+          onMoveUp={this.handleMoveUp}
+          onMoveDown={this.handleMoveDown}
+        />
+      )).concat(scrollableContent);
+    }
+
     return (
-      <ScrollableList {...other} ref={this.setRef}>
+      <ScrollableList {...other} onLoadMore={onLoadMore && this.handleLoadOlder} ref={this.setRef}>
         {scrollableContent}
       </ScrollableList>
     );

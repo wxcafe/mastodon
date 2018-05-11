@@ -9,7 +9,7 @@ module Mastodon
     end
 
     def minor
-      2
+      4
     end
 
     def patch
@@ -21,7 +21,7 @@ module Mastodon
     end
 
     def flags
-      ''
+      'rc1'
     end
 
     def to_a
@@ -33,7 +33,7 @@ module Mastodon
     end
 
     def source_base_url
-      'https://github.com/tootsuite/mastodon'
+      'https://github.com/glitch-soc/mastodon'
     end
 
     # specify git tag or commit hash here

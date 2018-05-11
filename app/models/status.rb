@@ -3,13 +3,13 @@
 #
 # Table name: statuses
 #
-#  id                     :integer          not null, primary key
+#  id                     :bigint(8)        not null, primary key
 #  uri                    :string
 #  text                   :text             default(""), not null
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
-#  in_reply_to_id         :integer
-#  reblog_of_id           :integer
+#  in_reply_to_id         :bigint(8)
+#  reblog_of_id           :bigint(8)
 #  url                    :string
 #  sensitive              :boolean          default(FALSE), not null
 #  visibility             :integer          default("public"), not null
@@ -18,12 +18,13 @@
 #  favourites_count       :integer          default(0), not null
 #  reblogs_count          :integer          default(0), not null
 #  language               :string
-#  conversation_id        :integer
+#  conversation_id        :bigint(8)
 #  local                  :boolean
-#  account_id             :integer          not null
-#  application_id         :integer
-#  in_reply_to_account_id :integer
+#  account_id             :bigint(8)        not null
+#  application_id         :bigint(8)
+#  in_reply_to_account_id :bigint(8)
 #  local_only             :boolean
+#  full_status_text       :text             default(""), not null
 #
 
 class Status < ApplicationRecord
@@ -31,6 +32,12 @@ class Status < ApplicationRecord
   include Streamable
   include Cacheable
   include StatusThreadingConcern
+
+  # If `override_timestamps` is set at creation time, Snowflake ID creation
+  # will be based on current time instead of `created_at`
+  attr_accessor :override_timestamps
+
+  update_index('statuses#status', :proper) if Chewy.enabled?
 
   enum visibility: [:public, :unlisted, :private, :direct], _suffix: :visibility
 
@@ -44,6 +51,7 @@ class Status < ApplicationRecord
   belongs_to :reblog, foreign_key: 'reblog_of_id', class_name: 'Status', inverse_of: :reblogs, counter_cache: :reblogs_count, optional: true
 
   has_many :favourites, inverse_of: :status, dependent: :destroy
+  has_many :bookmarks, inverse_of: :status, dependent: :destroy
   has_many :reblogs, foreign_key: 'reblog_of_id', class_name: 'Status', inverse_of: :reblog, dependent: :destroy
   has_many :replies, foreign_key: 'in_reply_to_id', class_name: 'Status', inverse_of: :thread
   has_many :mentions, dependent: :destroy
@@ -56,8 +64,9 @@ class Status < ApplicationRecord
   has_one :stream_entry, as: :activity, inverse_of: :status
 
   validates :uri, uniqueness: true, presence: true, unless: :local?
-  validates :text, presence: true, unless: :reblog?
+  validates :text, presence: true, unless: -> { with_media? || reblog? }
   validates_with StatusLengthValidator
+  validates_with DisallowedHashtagsValidator
   validates :reblog, uniqueness: { scope: :account }, if: :reblog?
 
   default_scope { recent }
@@ -77,9 +86,27 @@ class Status < ApplicationRecord
 
   scope :not_local_only, -> { where(local_only: [false, nil]) }
 
-  cache_associated :account, :application, :media_attachments, :tags, :stream_entry, mentions: :account, reblog: [:account, :application, :stream_entry, :tags, :media_attachments, mentions: :account], thread: :account
+  cache_associated :account, :application, :media_attachments, :conversation, :tags, :stream_entry, mentions: :account, reblog: [:account, :application, :stream_entry, :tags, :media_attachments, :conversation, mentions: :account], thread: :account
 
   delegate :domain, to: :account, prefix: true
+
+  REAL_TIME_WINDOW = 6.hours
+
+  def searchable_by(preloaded = nil)
+    ids = [account_id]
+
+    if preloaded.nil?
+      ids += mentions.pluck(:account_id)
+      ids += favourites.pluck(:account_id)
+      ids += reblogs.pluck(:account_id)
+    else
+      ids += preloaded.mentions[id] || []
+      ids += preloaded.favourites[id] || []
+      ids += preloaded.reblogs[id] || []
+    end
+
+    ids.uniq
+  end
 
   def reply?
     !in_reply_to_id.nil? || attributes['reply']
@@ -91,6 +118,10 @@ class Status < ApplicationRecord
 
   def reblog?
     !reblog_of_id.nil?
+  end
+
+  def within_realtime_window?
+    created_at >= REAL_TIME_WINDOW.ago
   end
 
   def verb
@@ -129,12 +160,16 @@ class Status < ApplicationRecord
     private_visibility? || direct_visibility?
   end
 
+  def with_media?
+    media_attachments.any?
+  end
+
   def non_sensitive_with_media?
-    !sensitive? && media_attachments.any?
+    !sensitive? && with_media?
   end
 
   def emojis
-    CustomEmoji.from_text([spoiler_text, text].join(' '), account.domain)
+    @emojis ||= CustomEmoji.from_text([spoiler_text, text].join(' '), account.domain)
   end
 
   after_create_commit :store_uri, if: :local?
@@ -186,6 +221,10 @@ class Status < ApplicationRecord
 
     def favourites_map(status_ids, account_id)
       Favourite.select('status_id').where(status_id: status_ids).where(account_id: account_id).map { |f| [f.status_id, true] }.to_h
+    end
+
+    def bookmarks_map(status_ids, account_id)
+      Bookmark.select('status_id').where(status_id: status_ids).where(account_id: account_id).map { |f| [f.status_id, true] }.to_h
     end
 
     def reblogs_map(status_ids, account_id)
@@ -322,7 +361,7 @@ class Status < ApplicationRecord
       self.in_reply_to_account_id = carried_over_reply_to_account_id
       self.conversation_id        = thread.conversation_id if conversation_id.nil?
     elsif conversation_id.nil?
-      create_conversation
+      self.conversation = Conversation.new
     end
   end
 

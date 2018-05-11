@@ -21,21 +21,22 @@ class PostStatusService < BaseService
 
     media  = validate_media!(options[:media_ids])
     status = nil
+    text   = options.delete(:spoiler_text) if text.blank? && options[:spoiler_text].present?
+    text   = '.' if text.blank? && !media.empty?
 
     ApplicationRecord.transaction do
       status = account.statuses.create!(text: text,
+                                        media_attachments: media || [],
                                         thread: in_reply_to,
-                                        sensitive: options[:sensitive],
+                                        sensitive: (options[:sensitive].nil? ? account.user&.setting_default_sensitive : options[:sensitive]),
                                         spoiler_text: options[:spoiler_text] || '',
                                         visibility: options[:visibility] || account.user&.setting_default_privacy,
-                                        language: LanguageDetector.instance.detect(text, account),
+                                        language: language_from_option(options[:language]) || LanguageDetector.instance.detect(text, account),
                                         application: options[:application])
-
-      attach_media(status, media)
     end
 
-    process_mentions_service.call(status)
     process_hashtags_service.call(status)
+    process_mentions_service.call(status)
 
     LinkCrawlWorker.perform_async(status.id) unless status.spoiler_text?
     DistributionWorker.perform_async(status.id)
@@ -67,9 +68,8 @@ class PostStatusService < BaseService
     media
   end
 
-  def attach_media(status, media)
-    return if media.nil?
-    media.update(status_id: status.id)
+  def language_from_option(str)
+    ISO_639.find(str)&.alpha2
   end
 
   def process_mentions_service

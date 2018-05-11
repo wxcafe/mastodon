@@ -9,6 +9,8 @@ import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { me } from 'flavours/glitch/util/initial_state';
+import { fetchFollowRequests } from 'flavours/glitch/actions/accounts';
+import { List as ImmutableList } from 'immutable';
 import { createSelector } from 'reselect';
 import { fetchLists } from 'flavours/glitch/actions/lists';
 
@@ -21,6 +23,7 @@ const messages = defineMessages({
   settings_subheading: { id: 'column_subheading.settings', defaultMessage: 'Settings' },
   community_timeline: { id: 'navigation_bar.community_timeline', defaultMessage: 'Local timeline' },
   direct: { id: 'navigation_bar.direct', defaultMessage: 'Direct messages' },
+  bookmarks: { id: 'navigation_bar.bookmarks', defaultMessage: 'Bookmarks' },
   preferences: { id: 'navigation_bar.preferences', defaultMessage: 'Preferences' },
   settings: { id: 'navigation_bar.app_settings', defaultMessage: 'App settings' },
   follow_requests: { id: 'navigation_bar.follow_requests', defaultMessage: 'Follow requests' },
@@ -45,13 +48,31 @@ const makeMapStateToProps = () => {
     lists: getOrderedLists(state),
     myAccount: state.getIn(['accounts', me]),
     columns: state.getIn(['settings', 'columns']),
+    unreadFollowRequests: state.getIn(['user_lists', 'follow_requests', 'items'], ImmutableList()).size,
+    unreadNotifications: state.getIn(['notifications', 'unread']),
   });
 
   return mapStateToProps;
 };
 
+const mapDispatchToProps = dispatch => ({
+  fetchFollowRequests: () => dispatch(fetchFollowRequests()),
+  fetchLists: () => dispatch(fetchLists()),
+  openSettings: () => dispatch(openModal('SETTINGS', {})),
+});
+
+const badgeDisplay = (number, limit) => {
+  if (number === 0) {
+    return undefined;
+  } else if (limit && number >= limit) {
+    return `${limit}+`;
+  } else {
+    return number;
+  }
+};
+
+@connect(makeMapStateToProps, mapDispatchToProps)
 @injectIntl
-@connect(makeMapStateToProps)
 export default class GettingStarted extends ImmutablePureComponent {
 
   static propTypes = {
@@ -59,25 +80,28 @@ export default class GettingStarted extends ImmutablePureComponent {
     myAccount: ImmutablePropTypes.map.isRequired,
     columns: ImmutablePropTypes.list,
     multiColumn: PropTypes.bool,
-    dispatch: PropTypes.func.isRequired,
+    fetchFollowRequests: PropTypes.func.isRequired,
+    unreadFollowRequests: PropTypes.number,
+    unreadNotifications: PropTypes.number,
     lists: ImmutablePropTypes.list,
+    fetchLists: PropTypes.func.isRequired,
+    openSettings: PropTypes.func.isRequired,
   };
 
-  openSettings = () => {
-    this.props.dispatch(openModal('SETTINGS', {}));
-  }
-
-  openOnboardingModal = (e) => {
-    e.preventDefault();
-    this.props.dispatch(openModal('ONBOARDING'));
-  }
-
   componentWillMount () {
-    this.props.dispatch(fetchLists());
+    this.props.fetchLists();
+  }
+
+  componentDidMount () {
+    const { myAccount, fetchFollowRequests } = this.props;
+
+    if (myAccount.get('locked')) {
+      fetchFollowRequests();
+    }
   }
 
   render () {
-    const { intl, myAccount, columns, multiColumn, lists } = this.props;
+    const { intl, myAccount, columns, multiColumn, unreadFollowRequests, unreadNotifications, lists, openSettings } = this.props;
 
     const navItems = [];
     let listItems = [];
@@ -88,7 +112,7 @@ export default class GettingStarted extends ImmutablePureComponent {
       }
 
       if (!columns.find(item => item.get('id') === 'NOTIFICATIONS')) {
-        navItems.push(<ColumnLink key='1' icon='bell' text={intl.formatMessage(messages.notifications)} to='/notifications' />);
+        navItems.push(<ColumnLink key='1' icon='bell' text={intl.formatMessage(messages.notifications)} badge={badgeDisplay(unreadNotifications)} to='/notifications' />);
       }
 
       if (!columns.find(item => item.get('id') === 'COMMUNITY')) {
@@ -104,8 +128,12 @@ export default class GettingStarted extends ImmutablePureComponent {
       navItems.push(<ColumnLink key='4' icon='envelope' text={intl.formatMessage(messages.direct)} to='/timelines/direct' />);
     }
 
+    if (!multiColumn || !columns.find(item => item.get('id') === 'BOOKMARKS')) {
+      navItems.push(<ColumnLink icon='bookmark' text={intl.formatMessage(messages.bookmarks)} to='/bookmarks' />);
+    }
+
     if (myAccount.get('locked')) {
-      navItems.push(<ColumnLink key='5' icon='users' text={intl.formatMessage(messages.follow_requests)} to='/follow_requests' />);
+      navItems.push(<ColumnLink key='5' icon='users' text={intl.formatMessage(messages.follow_requests)} badge={badgeDisplay(unreadFollowRequests, 40)} to='/follow_requests' />);
     }
 
     navItems.push(<ColumnLink key='6' icon='ellipsis-h' text={intl.formatMessage(messages.misc)} to='/getting-started-misc' />);
@@ -129,7 +157,7 @@ export default class GettingStarted extends ImmutablePureComponent {
             {listItems}
             <ColumnSubheading text={intl.formatMessage(messages.settings_subheading)} />
             <ColumnLink icon='cog' text={intl.formatMessage(messages.preferences)} href='/settings/preferences' />
-            <ColumnLink icon='cogs' text={intl.formatMessage(messages.settings)} onClick={this.openSettings} />
+            <ColumnLink icon='cogs' text={intl.formatMessage(messages.settings)} onClick={openSettings} />
             <ColumnLink icon='sign-out' text={intl.formatMessage(messages.sign_out)} href='/auth/sign_out' method='delete' />
           </div>
 
