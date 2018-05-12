@@ -50,6 +50,9 @@ import { wrap } from 'flavours/glitch/util/redux_helpers';
 //  State mapping.
 function mapStateToProps (state) {
   const inReplyTo = state.getIn(['compose', 'in_reply_to']);
+  const spoilerText = state.getIn(['compose', 'spoiler_text']);
+  const text = state.getIn(['compose', 'text']);
+  const count = (spoilerText + countableText(text)).length;
   return {
     acceptContentTypes: state.getIn(['media_attachments', 'accept_content_types']).toArray().join(','),
     advancedOptions: state.getIn(['compose', 'advanced_options']),
@@ -68,11 +71,11 @@ function mapStateToProps (state) {
     sideArm: state.getIn(['local_settings', 'side_arm']),
     sensitive: state.getIn(['compose', 'sensitive']),
     showSearch: state.getIn(['search', 'submitted']) && !state.getIn(['search', 'hidden']),
-    spoiler: state.getIn(['compose', 'spoiler']),
-    spoilerText: state.getIn(['compose', 'spoiler_text']),
+	spoiler: state.getIn(['compose', 'spoiler']) || count > 1000,
+	spoilerText: spoilerText,
     suggestionToken: state.getIn(['compose', 'suggestion_token']),
     suggestions: state.getIn(['compose', 'suggestions']),
-    text: state.getIn(['compose', 'text']),
+	text: text,
     anyMedia: state.getIn(['compose', 'media_attachments']).size > 0,
   };
 };
@@ -162,8 +165,12 @@ const handlers = {
       onChangeText(value);
     }
 
+	if (onChangeText && text.length > 1000) {
+		this.spoiler = true;
+	}
+
     // Submit disabled:
-    if (isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia)) {
+    if (isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia) || ((text.length > 1000 || this.props.spoiler) && this.props.spoilerText.length == 0)) {
       return;
     }
 
@@ -315,12 +322,12 @@ class Composer extends React.Component {
       text,
     } = this.props;
 
-    let disabledButton = isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia);
+    let disabledButton = isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia) || ((text.length > 1000 || this.props.spoiler) && this.props.spoilerText.length == 0);
 
     return (
       <div className='composer'>
         <ComposerSpoiler
-          hidden={!spoiler}
+          hidden={!spoiler || !(text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "_").length > 1000)}
           intl={intl}
           onChange={handleChangeSpoiler}
           onSubmit={handleSubmit}
