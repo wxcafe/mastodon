@@ -165,10 +165,6 @@ const handlers = {
       onChangeText(value);
     }
 
-	if (onChangeText && text.length > 1000) {
-		this.spoiler = true;
-	}
-
     // Submit disabled:
     if (isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia) || ((text.length > 1000 || this.props.spoiler) && this.props.spoilerText.length == 0)) {
       return;
@@ -327,7 +323,7 @@ class Composer extends React.Component {
     return (
       <div className='composer'>
         <ComposerSpoiler
-          hidden={!spoiler || !(text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "_").length > 1000)}
+          hidden={!spoiler}
           intl={intl}
           onChange={handleChangeSpoiler}
           onSubmit={handleSubmit}
