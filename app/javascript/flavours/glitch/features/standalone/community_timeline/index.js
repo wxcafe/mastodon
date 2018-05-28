@@ -3,19 +3,25 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import StatusListContainer from 'flavours/glitch/features/ui/containers/status_list_container';
 import {
-  refreshHashtagTimeline,
-  expandHashtagTimeline,
+  refreshCommunityTimeline,
+  expandCommunityTimeline,
 } from 'flavours/glitch/actions/timelines';
 import Column from 'flavours/glitch/components/column';
 import ColumnHeader from 'flavours/glitch/components/column_header';
-import { connectHashtagStream } from 'flavours/glitch/actions/streaming';
+import { defineMessages, injectIntl } from 'react-intl';
+import { connectCommunityStream } from 'flavours/glitch/actions/streaming';
+
+const messages = defineMessages({
+  title: { id: 'standalone.public_title', defaultMessage: 'A look inside...' },
+});
 
 @connect()
-export default class HashtagTimeline extends React.PureComponent {
+@injectIntl
+export default class CommunityTimeline extends React.PureComponent {
 
   static propTypes = {
     dispatch: PropTypes.func.isRequired,
-    hashtag: PropTypes.string.isRequired,
+    intl: PropTypes.object.isRequired,
   };
 
   handleHeaderClick = () => {
@@ -27,10 +33,10 @@ export default class HashtagTimeline extends React.PureComponent {
   }
 
   componentDidMount () {
-    const { dispatch, hashtag } = this.props;
+    const { dispatch } = this.props;
 
-    dispatch(refreshHashtagTimeline(hashtag));
-    this.disconnect = dispatch(connectHashtagStream(hashtag));
+    dispatch(refreshCommunityTimeline());
+    this.disconnect = dispatch(connectCommunityStream());
   }
 
   componentWillUnmount () {
@@ -41,25 +47,25 @@ export default class HashtagTimeline extends React.PureComponent {
   }
 
   handleLoadMore = () => {
-    this.props.dispatch(expandHashtagTimeline(this.props.hashtag));
+    this.props.dispatch(expandCommunityTimeline());
   }
 
   render () {
-    const { hashtag } = this.props;
+    const { intl } = this.props;
 
     return (
       <Column ref={this.setRef}>
         <ColumnHeader
-          icon='hashtag'
-          title={hashtag}
+          icon='users'
+          title={intl.formatMessage(messages.title)}
           onClick={this.handleHeaderClick}
         />
 
         <StatusListContainer
-          trackScroll={false}
-          scrollKey='standalone_hashtag_timeline'
-          timelineId={`hashtag:${hashtag}`}
+          timelineId='community'
           loadMore={this.handleLoadMore}
+          scrollKey='standalone_public_timeline'
+          trackScroll={false}
         />
       </Column>
     );
