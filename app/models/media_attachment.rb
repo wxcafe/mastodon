@@ -72,7 +72,7 @@ class MediaAttachment < ApplicationRecord
     },
   }.freeze
 
-  LIMIT = 8.megabytes
+  LIMIT = 12.megabytes
 
   belongs_to :account, inverse_of: :media_attachments, optional: true
   belongs_to :status,  inverse_of: :media_attachments, optional: true
