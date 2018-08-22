@@ -10,6 +10,8 @@ const initialState = ImmutableMap({
   stretch   : true,
   navbar_under : false,
   side_arm  : 'none',
+  side_arm_reply_mode : 'keep',
+  show_reply_count : false,
   collapsed : ImmutableMap({
     enabled     : true,
     auto        : ImmutableMap({

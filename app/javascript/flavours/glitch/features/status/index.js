@@ -53,7 +53,7 @@ const makeMapStateToProps = () => {
   const getStatus = makeGetStatus();
 
   const mapStateToProps = (state, props) => ({
-    status: getStatus(state, props.params.statusId),
+    status: getStatus(state, { id: props.params.statusId }),
     settings: state.get('local_settings'),
     ancestorsIds: state.getIn(['contexts', 'ancestors', props.params.statusId]),
     descendantsIds: state.getIn(['contexts', 'descendants', props.params.statusId]),
@@ -304,6 +304,7 @@ export default class Status extends ImmutablePureComponent {
         expanded={this.state.threadExpanded}
         onMoveUp={this.handleMoveUp}
         onMoveDown={this.handleMoveDown}
+        contextType='thread'
       />
     ));
   }
@@ -326,10 +327,10 @@ export default class Status extends ImmutablePureComponent {
     if (status && ancestorsIds && ancestorsIds.size > 0) {
       const element = this.node.querySelectorAll('.focusable')[ancestorsIds.size - 1];
 
-      if (element) {
+      window.requestAnimationFrame(() => {
         element.scrollIntoView(true);
-        this._scrolledIntoView = true;
-      }
+      });
+      this._scrolledIntoView = true;
     }
   }
 
@@ -339,6 +340,10 @@ export default class Status extends ImmutablePureComponent {
 
   onFullScreenChange = () => {
     this.setState({ fullscreen: isFullscreen() });
+  }
+
+  shouldUpdateScroll = (prevRouterProps, { location }) => {
+    return !(location.state && location.state.mastodonModalOpen)
   }
 
   render () {
@@ -384,7 +389,7 @@ export default class Status extends ImmutablePureComponent {
           )}
         />
 
-        <ScrollContainer scrollKey='thread'>
+        <ScrollContainer scrollKey='thread' shouldUpdateScroll={this.shouldUpdateScroll}>
           <div className={classNames('scrollable', 'detailed-status__wrapper', { fullscreen })} ref={this.setRef}>
             {ancestors}
 
