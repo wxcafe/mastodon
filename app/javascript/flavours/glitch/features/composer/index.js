@@ -52,6 +52,9 @@ import { privacyPreference } from 'flavours/glitch/util/privacy_preference';
 //  State mapping.
 function mapStateToProps (state) {
   const inReplyTo = state.getIn(['compose', 'in_reply_to']);
+  const spoilerText = state.getIn(['compose', 'spoiler_text']);
+  const text = state.getIn(['compose', 'text']);
+  const count = (spoilerText + countableText(text)).length;
   const replyPrivacy = inReplyTo ? state.getIn(['statuses', inReplyTo, 'visibility']) : null;
   const sideArmBasePrivacy = state.getIn(['local_settings', 'side_arm']);
   const sideArmRestrictedPrivacy = replyPrivacy ? privacyPreference(replyPrivacy, sideArmBasePrivacy) : null;
