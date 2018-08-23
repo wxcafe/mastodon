@@ -14,6 +14,9 @@ const messages = defineMessages({
   layout_desktop: { id: 'layout.desktop', defaultMessage: 'Desktop' },
   layout_mobile: { id: 'layout.single', defaultMessage: 'Mobile' },
   side_arm_none: { id: 'settings.side_arm.none', defaultMessage: 'None' },
+  side_arm_keep: { id: 'settings.side_arm_reply_mode.keep', defaultMessage: 'Keep secondary toot button to set privacy' },
+  side_arm_copy: { id: 'settings.side_arm_reply_mode.copy', defaultMessage: 'Copy privacy setting of the toot being replied to' },
+  side_arm_restrict: { id: 'settings.side_arm_reply_mode.restrict', defaultMessage: 'Restrict privacy setting to that of the toot being replied to' },
 });
 
 @injectIntl
@@ -32,33 +35,44 @@ export default class LocalSettingsPage extends React.PureComponent {
         <h1><FormattedMessage id='settings.general' defaultMessage='General' /></h1>
         <LocalSettingsPageItem
           settings={settings}
-          item={['layout']}
-          id='mastodon-settings--layout'
-          options={[
-            { value: 'auto', message: intl.formatMessage(messages.layout_auto) },
-            { value: 'multiple', message: intl.formatMessage(messages.layout_desktop) },
-            { value: 'single', message: intl.formatMessage(messages.layout_mobile) },
-          ]}
+          item={['show_reply_count']}
+          id='mastodon-settings--reply-count'
           onChange={onChange}
         >
-          <FormattedMessage id='settings.layout' defaultMessage='Layout:' />
+          <FormattedMessage id='settings.show_reply_counter' defaultMessage='Display an estimate of the reply count' />
         </LocalSettingsPageItem>
-        <LocalSettingsPageItem
-          settings={settings}
-          item={['stretch']}
-          id='mastodon-settings--stretch'
-          onChange={onChange}
-        >
-          <FormattedMessage id='settings.wide_view' defaultMessage='Wide view (Desktop mode only)' />
-        </LocalSettingsPageItem>
-        <LocalSettingsPageItem
-          settings={settings}
-          item={['navbar_under']}
-          id='mastodon-settings--navbar_under'
-          onChange={onChange}
-        >
-          <FormattedMessage id='settings.navbar_under' defaultMessage='Navbar at the bottom (Mobile only)' />
-        </LocalSettingsPageItem>
+        <section>
+          <h2><FormattedMessage id='settings.layout_opts' defaultMessage='Layout options' /></h2>
+          <LocalSettingsPageItem
+            settings={settings}
+            item={['layout']}
+            id='mastodon-settings--layout'
+            options={[
+              { value: 'auto', message: intl.formatMessage(messages.layout_auto) },
+              { value: 'multiple', message: intl.formatMessage(messages.layout_desktop) },
+              { value: 'single', message: intl.formatMessage(messages.layout_mobile) },
+            ]}
+            onChange={onChange}
+          >
+            <FormattedMessage id='settings.layout' defaultMessage='Layout:' />
+          </LocalSettingsPageItem>
+          <LocalSettingsPageItem
+            settings={settings}
+            item={['stretch']}
+            id='mastodon-settings--stretch'
+            onChange={onChange}
+          >
+            <FormattedMessage id='settings.wide_view' defaultMessage='Wide view (Desktop mode only)' />
+          </LocalSettingsPageItem>
+          <LocalSettingsPageItem
+            settings={settings}
+            item={['navbar_under']}
+            id='mastodon-settings--navbar_under'
+            onChange={onChange}
+          >
+            <FormattedMessage id='settings.navbar_under' defaultMessage='Navbar at the bottom (Mobile only)' />
+          </LocalSettingsPageItem>
+        </section>
         <section>
           <h2><FormattedMessage id='settings.compose_box_opts' defaultMessage='Compose box options' /></h2>
           <LocalSettingsPageItem
@@ -75,6 +89,19 @@ export default class LocalSettingsPage extends React.PureComponent {
             onChange={onChange}
           >
             <FormattedMessage id='settings.side_arm' defaultMessage='Secondary toot button:' />
+          </LocalSettingsPageItem>
+          <LocalSettingsPageItem
+            settings={settings}
+            item={['side_arm_reply_mode']}
+            id='mastodon-settings--side_arm_reply_mode'
+            options={[
+              { value: 'keep', message: intl.formatMessage(messages.side_arm_keep) },
+              { value: 'copy', message: intl.formatMessage(messages.side_arm_copy) },
+              { value: 'restrict', message: intl.formatMessage(messages.side_arm_restrict) },
+            ]}
+            onChange={onChange}
+          >
+            <FormattedMessage id='settings.side_arm_reply_mode' defaultMessage='When replying to a toot:' />
           </LocalSettingsPageItem>
         </section>
       </div>

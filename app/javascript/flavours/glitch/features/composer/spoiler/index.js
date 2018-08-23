@@ -3,9 +3,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { defineMessages, FormattedMessage } from 'react-intl';
 
-//  Components.
-import Collapsable from 'flavours/glitch/components/collapsable';
-
 //  Utils.
 import {
   assignHandlers,
@@ -36,6 +33,10 @@ const handlers = {
       onSubmit();
     }
   },
+
+  handleRefSpoilerText (spoilerText) {
+    this.spoilerText = spoilerText;
+  },
 };
 
 //  The component.
@@ -49,7 +50,7 @@ export default class ComposerSpoiler extends React.PureComponent {
 
   //  Rendering.
   render () {
-    const { handleKeyDown } = this.handlers;
+    const { handleKeyDown, handleRefSpoilerText } = this.handlers;
     const {
       hidden,
       intl,
@@ -59,11 +60,8 @@ export default class ComposerSpoiler extends React.PureComponent {
 
     //  The result.
     return (
-      <Collapsable
-        isVisible={!hidden}
-        fullHeight={50}
-      >
-        <label className='composer--spoiler'>
+      <div className={`composer--spoiler ${hidden ? '' : 'composer--spoiler--visible'}`}>
+        <label>
           <span {...hiddenComponent}>
             <FormattedMessage {...messages.placeholder} />
           </span>
@@ -74,9 +72,10 @@ export default class ComposerSpoiler extends React.PureComponent {
             placeholder={intl.formatMessage(messages.placeholder)}
             type='text'
             value={text}
+            ref={handleRefSpoilerText}
           />
         </label>
-      </Collapsable>
+      </div>
     );
   }
 

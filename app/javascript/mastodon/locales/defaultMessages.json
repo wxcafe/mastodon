@@ -335,6 +335,10 @@
   {
     "descriptors": [
       {
+        "defaultMessage": "Filtered",
+        "id": "status.filtered"
+      },
+      {
         "defaultMessage": "Pinned toot",
         "id": "status.pinned"
       },
@@ -554,6 +558,14 @@
         "id": "navigation_bar.mutes"
       },
       {
+        "defaultMessage": "Feature on profile",
+        "id": "account.endorse"
+      },
+      {
+        "defaultMessage": "Don't feature on profile",
+        "id": "account.unendorse"
+      },
+      {
         "defaultMessage": "Information below may reflect the user's profile incompletely.",
         "id": "account.disclaimer_full"
       },
@@ -633,20 +645,8 @@
   {
     "descriptors": [
       {
-        "defaultMessage": "Filter out by regular expressions",
-        "id": "home.column_settings.filter_regex"
-      },
-      {
-        "defaultMessage": "Column settings",
-        "id": "home.settings"
-      },
-      {
         "defaultMessage": "Media Only",
         "id": "community.column_settings.media_only"
-      },
-      {
-        "defaultMessage": "Advanced",
-        "id": "home.column_settings.advanced"
       }
     ],
     "path": "app/javascript/mastodon/features/community_timeline/components/column_settings.json"
@@ -701,6 +701,10 @@
       {
         "defaultMessage": "Muted users",
         "id": "navigation_bar.mutes"
+      },
+      {
+        "defaultMessage": "Muted words",
+        "id": "navigation_bar.filters"
       }
     ],
     "path": "app/javascript/mastodon/features/compose/components/action_bar.json"
@@ -1022,23 +1026,6 @@
   {
     "descriptors": [
       {
-        "defaultMessage": "Filter out by regular expressions",
-        "id": "home.column_settings.filter_regex"
-      },
-      {
-        "defaultMessage": "Column settings",
-        "id": "home.settings"
-      },
-      {
-        "defaultMessage": "Advanced",
-        "id": "home.column_settings.advanced"
-      }
-    ],
-    "path": "app/javascript/mastodon/features/direct_timeline/components/column_settings.json"
-  },
-  {
-    "descriptors": [
-      {
         "defaultMessage": "Direct messages",
         "id": "column.direct"
       },
@@ -1188,6 +1175,10 @@
         "id": "navigation_bar.info"
       },
       {
+        "defaultMessage": "Mobile apps",
+        "id": "navigation_bar.apps"
+      },
+      {
         "defaultMessage": "Terms of service",
         "id": "getting_started.terms"
       },
@@ -1222,14 +1213,6 @@
   {
     "descriptors": [
       {
-        "defaultMessage": "Filter out by regular expressions",
-        "id": "home.column_settings.filter_regex"
-      },
-      {
-        "defaultMessage": "Column settings",
-        "id": "home.settings"
-      },
-      {
         "defaultMessage": "Basic",
         "id": "home.column_settings.basic"
       },
@@ -1240,10 +1223,6 @@
       {
         "defaultMessage": "Show replies",
         "id": "home.column_settings.show_replies"
-      },
-      {
-        "defaultMessage": "Advanced",
-        "id": "home.column_settings.advanced"
       }
     ],
     "path": "app/javascript/mastodon/features/home_timeline/components/column_settings.json"
@@ -1286,6 +1265,10 @@
       {
         "defaultMessage": "to mention author",
         "id": "keyboard_shortcuts.mention"
+      },
+      {
+        "defaultMessage": "to open author's profile",
+        "id": "keyboard_shortcuts.profile"
       },
       {
         "defaultMessage": "to favourite",
@@ -1948,16 +1931,16 @@
         "id": "tabs_bar.notifications"
       },
       {
-        "defaultMessage": "Search",
-        "id": "tabs_bar.search"
-      },
-      {
         "defaultMessage": "Local",
         "id": "tabs_bar.local_timeline"
       },
       {
         "defaultMessage": "Federated",
         "id": "tabs_bar.federated_timeline"
+      },
+      {
+        "defaultMessage": "Search",
+        "id": "tabs_bar.search"
       }
     ],
     "path": "app/javascript/mastodon/features/ui/components/tabs_bar.json"
