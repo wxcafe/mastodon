@@ -293,11 +293,8 @@
   "status.cancel_reblog_private": "Unboost",
   "status.cannot_reblog": "This post cannot be boosted",
   "status.delete": "Delete",
-<<<<<<< HEAD
   "status.favourite": "Sweeten",
-=======
   "status.detailed_status": "Detailed conversation view",
->>>>>>> glitch/master
   "status.direct": "Direct message @{name}",
   "status.embed": "Embed",
   "status.filtered": "Filtered",
