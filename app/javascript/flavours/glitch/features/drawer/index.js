@@ -34,6 +34,8 @@ const mapStateToProps = state => ({
   searchHidden: state.getIn(['search', 'hidden']),
   searchValue: state.getIn(['search', 'value']),
   submitted: state.getIn(['search', 'submitted']),
+  unreadNotifications: state.getIn(['notifications', 'unread']),
+  showNotificationsBadge: state.getIn(['local_settings', 'notifications', 'tab_badge']),
 });
 
 //  Dispatch mapping.
@@ -86,6 +88,9 @@ class Drawer extends React.Component {
       searchHidden,
       searchValue,
       submitted,
+      isSearchPage,
+      unreadNotifications,
+      showNotificationsBadge,
     } = this.props;
     const computedClass = classNames('drawer', `mbstobon-${elefriend}`);
 
@@ -95,27 +100,30 @@ class Drawer extends React.Component {
         {multiColumn ? (
           <DrawerHeader
             columns={columns}
+            unreadNotifications={unreadNotifications}
+            showNotificationsBadge={showNotificationsBadge}
             intl={intl}
             onSettingsClick={onOpenSettings}
           />
         ) : null}
-        <DrawerSearch
-          intl={intl}
-          onChange={onChange}
-          onClear={onClear}
-          onShow={onShow}
-          onSubmit={onSubmit}
-          submitted={submitted}
-          value={searchValue}
-        />
+        {(multiColumn || isSearchPage) && <DrawerSearch
+            intl={intl}
+            onChange={onChange}
+            onClear={onClear}
+            onShow={onShow}
+            onSubmit={onSubmit}
+            submitted={submitted}
+            value={searchValue}
+          /> }
         <div className='contents'>
-          <DrawerAccount account={account} />
-          <Composer />
+          {!isSearchPage && <DrawerAccount account={account} />}
+          {!isSearchPage && <Composer />}
           {multiColumn && <button className='mastodon' onClick={onClickElefriend} />}
-          <DrawerResults
-            results={results}
-            visible={submitted && !searchHidden}
-          />
+          {(multiColumn || isSearchPage) &&
+            <DrawerResults
+              results={results}
+              visible={submitted && !searchHidden}
+            />}
         </div>
       </div>
     );
@@ -126,6 +134,7 @@ class Drawer extends React.Component {
 //  Props.
 Drawer.propTypes = {
   intl: PropTypes.object.isRequired,
+  isSearchPage: PropTypes.bool,
   multiColumn: PropTypes.bool,
 
   //  State props.
@@ -136,6 +145,8 @@ Drawer.propTypes = {
   searchHidden: PropTypes.bool,
   searchValue: PropTypes.string,
   submitted: PropTypes.bool,
+  unreadNotifications: PropTypes.number,
+  showNotificationsBadge: PropTypes.bool,
 
   //  Dispatch props.
   onChange: PropTypes.func,

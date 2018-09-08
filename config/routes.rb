@@ -23,6 +23,7 @@ Rails.application.routes.draw do
   get '.well-known/webfinger', to: 'well_known/webfinger#show', as: :webfinger
   get 'manifest', to: 'manifests#show', defaults: { format: 'json' }
   get 'intent', to: 'intents#show'
+  get 'custom.css', to: 'custom_css#show', as: :custom_css
 
   devise_scope :user do
     get '/invite/:invite_code', to: 'auth/registrations#new', as: :public_invite
@@ -38,6 +39,7 @@ Rails.application.routes.draw do
   }
 
   get '/users/:username', to: redirect('/@%{username}'), constraints: lambda { |req| req.format.nil? || req.format.html? }
+  get '/authorize_follow', to: redirect { |_, request| "/authorize_interaction?#{request.params.to_query}" }
 
   resources :accounts, path: 'users', only: [:show], param: :username do
     resources :stream_entries, path: 'updates', only: [:show] do
@@ -178,7 +180,7 @@ Rails.application.routes.draw do
       resource :reset, only: [:create]
       resource :silence, only: [:create, :destroy]
       resource :suspension, only: [:new, :create, :destroy]
-      resources :statuses, only: [:index, :create, :update, :destroy]
+      resources :statuses, only: [:index, :show, :create, :update, :destroy]
 
       resource :confirmation, only: [:create] do
         collection do
