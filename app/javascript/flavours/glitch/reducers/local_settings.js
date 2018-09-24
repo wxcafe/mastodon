@@ -12,6 +12,12 @@ const initialState = ImmutableMap({
   side_arm  : 'none',
   side_arm_reply_mode : 'keep',
   show_reply_count : false,
+  always_show_spoilers_field: false,
+  confirm_missing_media_description: false,
+  content_warnings : ImmutableMap({
+    auto_unfold : false,
+    filter      : null,
+  }),
   collapsed : ImmutableMap({
     enabled     : true,
     auto        : ImmutableMap({
@@ -30,6 +36,10 @@ const initialState = ImmutableMap({
   media     : ImmutableMap({
     letterbox   : true,
     fullwidth   : true,
+  }),
+  notifications : ImmutableMap({
+    favicon_badge : false,
+    tab_badge     : true,
   }),
 });
 

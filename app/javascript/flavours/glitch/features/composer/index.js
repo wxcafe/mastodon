@@ -2,6 +2,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
+import { defineMessages } from 'react-intl';
 
 const APPROX_HASHTAG_RE = /(?:^|[^\/\)\w])#(\S+)/i;
 
@@ -49,8 +50,16 @@ import { assignHandlers } from 'flavours/glitch/util/react_helpers';
 import { wrap } from 'flavours/glitch/util/redux_helpers';
 import { privacyPreference } from 'flavours/glitch/util/privacy_preference';
 
+const messages = defineMessages({
+  missingDescriptionMessage: {  id: 'confirmations.missing_media_description.message',
+                                defaultMessage: 'At least one media attachment is lacking a description. Consider describing all media attachments for the visually impaired before sending your toot.' },
+  missingDescriptionConfirm: {  id: 'confirmations.missing_media_description.confirm',
+                                defaultMessage: 'Send anyway' },
+});
+
 //  State mapping.
 function mapStateToProps (state) {
+  const spoilersAlwaysOn = state.getIn(['local_settings', 'always_show_spoilers_field']);
   const inReplyTo = state.getIn(['compose', 'in_reply_to']);
   const spoilerText = state.getIn(['compose', 'spoiler_text']);
   const text = state.getIn(['compose', 'text']);
@@ -88,17 +97,20 @@ function mapStateToProps (state) {
     sideArm: sideArmPrivacy,
     sensitive: state.getIn(['compose', 'sensitive']),
     showSearch: state.getIn(['search', 'submitted']) && !state.getIn(['search', 'hidden']),
-	spoiler: state.getIn(['compose', 'spoiler']) || count > 1000,
-	spoilerText: spoilerText,
+    spoiler: spoilersAlwaysOn || state.getIn(['compose', 'spoiler']) || count > 1000,
+//	spoilerText: spoilerText,
+    spoilerText: state.getIn(['compose', 'spoiler_text']),
     suggestionToken: state.getIn(['compose', 'suggestion_token']),
     suggestions: state.getIn(['compose', 'suggestions']),
 	text: text,
     anyMedia: state.getIn(['compose', 'media_attachments']).size > 0,
+    spoilersAlwaysOn: spoilersAlwaysOn,
+    mediaDescriptionConfirmation: state.getIn(['local_settings', 'confirm_missing_media_description']),
   };
 };
 
 //  Dispatch mapping.
-const mapDispatchToProps = (dispatch) => ({
+const mapDispatchToProps = (dispatch, { intl }) => ({
   onCancelReply() {
     dispatch(cancelReplyCompose());
   },
@@ -149,6 +161,13 @@ const mapDispatchToProps = (dispatch) => ({
   },
   onSelectSuggestion(position, token, suggestion) {
     dispatch(selectComposeSuggestion(position, token, suggestion));
+  },
+  onMediaDescriptionConfirm() {
+    dispatch(openModal('CONFIRM', {
+      message: intl.formatMessage(messages.missingDescriptionMessage),
+      confirm: intl.formatMessage(messages.missingDescriptionConfirm),
+      onConfirm: () => dispatch(submitCompose()),
+    }));
   },
   onSubmit() {
     dispatch(submitCompose());
@@ -207,14 +226,17 @@ const handlers = {
 
   //  Submits the status.
   handleSubmit () {
-    const { textarea: { value } } = this;
+    const { textarea: { value }, uploadForm } = this;
     const {
       onChangeText,
       onSubmit,
       isSubmitting,
       isUploading,
+      media,
       anyMedia,
       text,
+      mediaDescriptionConfirmation,
+      onMediaDescriptionConfirm,
     } = this.props;
 
     //  If something changes inside the textarea, then we update the
@@ -228,10 +250,24 @@ const handlers = {
       return;
     }
 
-    //  Submits the status.
-    if (onSubmit) {
+    // Submit unless there are media with missing descriptions
+    if (mediaDescriptionConfirmation && onMediaDescriptionConfirm && media && media.some(item => !item.get('description'))) {
+      const firstWithoutDescription = media.findIndex(item => !item.get('description'));
+      if (uploadForm) {
+        const inputs = uploadForm.querySelectorAll('.composer--upload_form--item input');
+        if (inputs.length == media.size && firstWithoutDescription !== -1) {
+          inputs[firstWithoutDescription].focus();
+        }
+      }
+      onMediaDescriptionConfirm();
+    } else if (onSubmit) {
       onSubmit();
     }
+  },
+
+  //  Sets a reference to the upload form.
+  handleRefUploadForm (uploadFormComponent) {
+    this.uploadForm = uploadFormComponent;
   },
 
   //  Sets a reference to the textarea.
@@ -340,6 +376,7 @@ class Composer extends React.Component {
       handleSecondarySubmit,
       handleSelect,
       handleSubmit,
+      handleRefUploadForm,
       handleRefTextarea,
       handleRefSpoilerText,
     } = this.handlers;
@@ -379,6 +416,7 @@ class Composer extends React.Component {
       spoilerText,
       suggestions,
       text,
+      spoilersAlwaysOn,
     } = this.props;
 
     let disabledButton = isSubmitting || isUploading || (!!text.length && !text.trim().length && !anyMedia) || ((text.length > 1000 || this.props.spoiler) && this.props.spoilerText.length == 0);
@@ -429,6 +467,7 @@ class Composer extends React.Component {
             onRemove={onUndoUpload}
             progress={progress}
             uploading={isUploading}
+            handleRef={handleRefUploadForm}
           />
         ) : null}
         <ComposerOptions
@@ -446,12 +485,12 @@ class Composer extends React.Component {
           onDoodleOpen={onOpenDoodleModal}
           onModalClose={onCloseModal}
           onModalOpen={onOpenActionsModal}
-          onToggleSpoiler={onChangeSpoilerness}
+          onToggleSpoiler={spoilersAlwaysOn ? null : onChangeSpoilerness}
           onUpload={onUpload}
           privacy={privacy}
           resetFileKey={resetFileKey}
-          sensitive={sensitive}
-          spoiler={spoiler}
+          sensitive={sensitive || (spoilersAlwaysOn && spoilerText && spoilerText.length > 0)}
+          spoiler={spoilersAlwaysOn ? (spoilerText && spoilerText.length > 0) : spoiler}
         />
         <ComposerPublisher
           countText={`${spoilerText}${countableText(text)}${advancedOptions && advancedOptions.get('do_not_federate') ? ' 👁️' : ''}`}
@@ -495,6 +534,9 @@ Composer.propTypes = {
   suggestionToken: PropTypes.string,
   suggestions: ImmutablePropTypes.list,
   text: PropTypes.string,
+  anyMedia: PropTypes.bool,
+  spoilersAlwaysOn: PropTypes.bool,
+  mediaDescriptionConfirmation: PropTypes.bool,
 
   //  Dispatch props.
   onCancelReply: PropTypes.func,
@@ -517,7 +559,7 @@ Composer.propTypes = {
   onUndoUpload: PropTypes.func,
   onUnmount: PropTypes.func,
   onUpload: PropTypes.func,
-  anyMedia: PropTypes.bool,
+  onMediaDescriptionConfirm: PropTypes.func,
 };
 
 //  Connecting and export.
