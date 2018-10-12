@@ -50,7 +50,8 @@ export default class LocalSettingsPage extends React.PureComponent {
             id='mastodon-settings--notifications-tab_badge'
             onChange={onChange}
           >
-            <FormattedMessage id='settings.notifications.tab_badge' defaultMessage="Display a badge for unread notifications if the notifications column isn't open" />
+            <FormattedMessage id='settings.notifications.tab_badge' defaultMessage="Unread notifications badge" />
+            <span className='hint'><FormattedMessage id='settings.notifications.tab_badge.hint' defaultMessage="Display a badge for unread notifications in the column icons when the notifications column isn't open" /></span>
           </LocalSettingsPageItem>
           <LocalSettingsPageItem
             settings={settings}
@@ -58,7 +59,8 @@ export default class LocalSettingsPage extends React.PureComponent {
             id='mastodon-settings--notifications-favicon_badge'
             onChange={onChange}
           >
-            <FormattedMessage id='settings.notifications.favicon_badge' defaultMessage='Display unread notifications count in the favicon' />
+            <FormattedMessage id='settings.notifications.favicon_badge' defaultMessage='Unread notifications favicon badge' />
+            <span className='hint'><FormattedMessage id='settings.notifications.favicon_badge.hint' defaultMessage="Add a badge for unread notifications to the favicon" /></span>
           </LocalSettingsPageItem>
         </section>
         <section>
@@ -83,6 +85,7 @@ export default class LocalSettingsPage extends React.PureComponent {
             onChange={onChange}
           >
             <FormattedMessage id='settings.wide_view' defaultMessage='Wide view (Desktop mode only)' />
+            <span className='hint'><FormattedMessage id='settings.wide_view_hint' defaultMessage='Stretches columns to better fill the available space.' /></span>
           </LocalSettingsPageItem>
           <LocalSettingsPageItem
             settings={settings}
@@ -96,7 +99,7 @@ export default class LocalSettingsPage extends React.PureComponent {
       </div>
     ),
     ({ intl, onChange, settings }) => (
-      <div className='glitch local-settings_page compose_box_opts'>
+      <div className='glitch local-settings__page compose_box_opts'>
         <h1><FormattedMessage id='settings.compose_box_opts' defaultMessage='Compose box options' /></h1>
         <LocalSettingsPageItem
           settings={settings}
@@ -105,6 +108,15 @@ export default class LocalSettingsPage extends React.PureComponent {
           onChange={onChange}
         >
           <FormattedMessage id='settings.always_show_spoilers_field' defaultMessage='Always enable the Content Warning field' />
+        </LocalSettingsPageItem>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['preselect_on_reply']}
+          id='mastodon-settings--preselect_on_reply'
+          onChange={onChange}
+        >
+          <FormattedMessage id='settings.preselect_on_reply' defaultMessage='Pre-select usernames on reply' />
+          <span className='hint'><FormattedMessage id='settings.preselect_on_reply_hint' defaultMessage='When replying to a conversation with multiple participants, pre-select usernames past the first' /></span>
         </LocalSettingsPageItem>
         <LocalSettingsPageItem
           settings={settings}
@@ -177,6 +189,15 @@ export default class LocalSettingsPage extends React.PureComponent {
           onChange={onChange}
         >
           <FormattedMessage id='settings.enable_collapsed' defaultMessage='Enable collapsed toots' />
+        </LocalSettingsPageItem>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['collapsed', 'show_action_bar']}
+          id='mastodon-settings--collapsed-show-action-bar'
+          onChange={onChange}
+          dependsOn={[['collapsed', 'enabled']]}
+        >
+          <FormattedMessage id='settings.show_action_bar' defaultMessage='Show action buttons in collapsed toots' />
         </LocalSettingsPageItem>
         <section>
           <h2><FormattedMessage id='settings.auto_collapse' defaultMessage='Automatic collapsing' /></h2>
@@ -273,6 +294,7 @@ export default class LocalSettingsPage extends React.PureComponent {
           onChange={onChange}
         >
           <FormattedMessage id='settings.media_letterbox' defaultMessage='Letterbox media' />
+          <span className='hint'><FormattedMessage id='settings.media_letterbox_hint' defaultMessage='Scale down and letterbox media to fill the image containers instead of stretching and cropping them' /></span>
         </LocalSettingsPageItem>
         <LocalSettingsPageItem
           settings={settings}
