@@ -33,6 +33,7 @@ const messages = defineMessages({
   lists: { id: 'navigation_bar.lists', defaultMessage: 'Lists' },
   lists_subheading: { id: 'column_subheading.lists', defaultMessage: 'Lists' },
   misc: { id: 'navigation_bar.misc', defaultMessage: 'Misc' },
+  menu: { id: 'getting_started.heading', defaultMessage: 'Getting started' },
 });
 
 const makeMapStateToProps = () => {
@@ -148,7 +149,7 @@ export default class GettingStarted extends ImmutablePureComponent {
     ]);
 
     return (
-      <Column name='getting-started' icon='asterisk' heading={intl.formatMessage(messages.heading)} hideHeadingOnMobile>
+      <Column name='getting-started' icon='asterisk' heading={intl.formatMessage(messages.heading)} label={intl.formatMessage(messages.menu)} hideHeadingOnMobile>
         <div className='scrollable optionally-scrollable'>
           <div className='getting-started__wrapper'>
             <ColumnSubheading text={intl.formatMessage(messages.navigation_subheading)} />
@@ -164,13 +165,10 @@ export default class GettingStarted extends ImmutablePureComponent {
           <div className='getting-started__footer'>
             <div className='static-content getting-started'>
               <p>
-                <a href='https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/FAQ.md' rel='noopener' target='_blank'>
-                  <FormattedMessage id='getting_started.faq' defaultMessage='FAQ' />
+                <a href='https://docs.joinmastodon.org' target='_blank'>
+                  <FormattedMessage id='getting_started.documentation' defaultMessage='Documentation' />
                 </a>&nbsp;•&nbsp;
-                <a href='https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md' rel='noopener' target='_blank'>
-                  <FormattedMessage id='getting_started.userguide' defaultMessage='User Guide' />
-                </a>&nbsp;•&nbsp;
-                <a href='https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/Apps.md' rel='noopener' target='_blank'>
+                <a href='https://joinmastodon.org/apps' target='_blank' rel='noopener'>
                   <FormattedMessage id='getting_started.appsshort' defaultMessage='Apps' />
                 </a>
               </p>
