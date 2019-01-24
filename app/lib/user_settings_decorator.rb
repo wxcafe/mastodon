@@ -30,9 +30,11 @@ class UserSettingsDecorator
     user.settings['reduce_motion']       = reduce_motion_preference if change?('setting_reduce_motion')
     user.settings['system_font_ui']      = system_font_ui_preference if change?('setting_system_font_ui')
     user.settings['noindex']             = noindex_preference if change?('setting_noindex')
+    user.settings['hide_followers_count']= hide_followers_count_preference if change?('setting_hide_followers_count')
     user.settings['flavour']             = flavour_preference if change?('setting_flavour')
     user.settings['skin']                = skin_preference if change?('setting_skin')
     user.settings['hide_network']        = hide_network_preference if change?('setting_hide_network')
+    user.settings['aggregate_reblogs']   = aggregate_reblogs_preference if change?('setting_aggregate_reblogs')
   end
 
   def merged_notification_emails
@@ -91,6 +93,10 @@ class UserSettingsDecorator
     boolean_cast_setting 'setting_noindex'
   end
 
+  def hide_followers_count_preference
+    boolean_cast_setting 'setting_hide_followers_count'
+  end
+
   def flavour_preference
     settings['setting_flavour']
   end
@@ -105,6 +111,10 @@ class UserSettingsDecorator
 
   def default_language_preference
     settings['setting_default_language']
+  end
+
+  def aggregate_reblogs_preference
+    boolean_cast_setting 'setting_aggregate_reblogs'
   end
 
   def boolean_cast_setting(key)
