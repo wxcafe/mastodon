@@ -7,6 +7,7 @@ import { injectIntl, FormattedMessage } from 'react-intl';
 import Permalink from '../../../components/permalink';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { HotKeys } from 'react-hotkeys';
+import Icon from 'mastodon/components/icon';
 
 const notificationForScreenReader = (intl, message, timestamp) => {
   const output = [message];
@@ -29,6 +30,10 @@ class Notification extends ImmutablePureComponent {
     onMoveUp: PropTypes.func.isRequired,
     onMoveDown: PropTypes.func.isRequired,
     onMention: PropTypes.func.isRequired,
+    onFavourite: PropTypes.func.isRequired,
+    onReblog: PropTypes.func.isRequired,
+    onToggleHidden: PropTypes.func.isRequired,
+    status: PropTypes.option,
     intl: PropTypes.object.isRequired,
   };
 
@@ -64,14 +69,32 @@ class Notification extends ImmutablePureComponent {
     onMention(notification.get('account'), this.context.router.history);
   }
 
+  handleHotkeyFavourite = () => {
+    const { status } = this.props;
+    if (status) this.props.onFavourite(status);
+  }
+
+  handleHotkeyBoost = e => {
+    const { status } = this.props;
+    if (status) this.props.onReblog(status, e);
+  }
+
+  handleHotkeyToggleHidden = () => {
+    const { status } = this.props;
+    if (status) this.props.onToggleHidden(status);
+  }
+
   getHandlers () {
     return {
-      moveUp: this.handleMoveUp,
-      moveDown: this.handleMoveDown,
+      reply: this.handleMention,
+      favourite: this.handleHotkeyFavourite,
+      boost: this.handleHotkeyBoost,
+      mention: this.handleMention,
       open: this.handleOpen,
       openProfile: this.handleOpenProfile,
-      mention: this.handleMention,
-      reply: this.handleMention,
+      moveUp: this.handleMoveUp,
+      moveDown: this.handleMoveDown,
+      toggleHidden: this.handleHotkeyToggleHidden,
     };
   }
 
@@ -83,8 +106,9 @@ class Notification extends ImmutablePureComponent {
         <div className='notification notification-follow focusable' tabIndex='0' aria-label={notificationForScreenReader(intl, intl.formatMessage({ id: 'notification.follow', defaultMessage: '{name} followed you' }, { name: account.get('acct') }), notification.get('created_at'))}>
           <div className='notification__message'>
             <div className='notification__favourite-icon-wrapper'>
-              <i className='fa fa-fw fa-user-plus' />
+              <Icon id='user-plus' fixedWidth />
             </div>
+
             <span title={notification.get('created_at')}>
               <FormattedMessage id='notification.follow' defaultMessage='{name} followed you' values={{ name: link }} />
             </span>
@@ -117,9 +141,12 @@ class Notification extends ImmutablePureComponent {
         <div className='notification notification-favourite focusable' tabIndex='0' aria-label={notificationForScreenReader(intl, intl.formatMessage({ id: 'notification.favourite', defaultMessage: '{name} favourited your status' }, { name: notification.getIn(['account', 'acct']) }), notification.get('created_at'))}>
           <div className='notification__message'>
             <div className='notification__favourite-icon-wrapper'>
-              <i className='fa fa-fw fa-star star-icon' />
+              <Icon id='star' className='star-icon' fixedWidth />
             </div>
-            <FormattedMessage id='notification.favourite' defaultMessage='{name} favourited your status' values={{ name: link }} />
+
+            <span title={notification.get('created_at')}>
+              <FormattedMessage id='notification.favourite' defaultMessage='{name} favourited your status' values={{ name: link }} />
+            </span>
           </div>
 
           <StatusContainer id={notification.get('status')} account={notification.get('account')} muted withDismiss hidden={!!this.props.hidden} />
@@ -136,9 +163,12 @@ class Notification extends ImmutablePureComponent {
         <div className='notification notification-reblog focusable' tabIndex='0' aria-label={notificationForScreenReader(intl, intl.formatMessage({ id: 'notification.reblog', defaultMessage: '{name} boosted your status' }, { name: notification.getIn(['account', 'acct']) }), notification.get('created_at'))}>
           <div className='notification__message'>
             <div className='notification__favourite-icon-wrapper'>
-              <i className='fa fa-fw fa-retweet' />
+              <Icon id='retweet' fixedWidth />
             </div>
-            <FormattedMessage id='notification.reblog' defaultMessage='{name} boosted your status' values={{ name: link }} />
+
+            <span title={notification.get('created_at')}>
+              <FormattedMessage id='notification.reblog' defaultMessage='{name} boosted your status' values={{ name: link }} />
+            </span>
           </div>
 
           <StatusContainer id={notification.get('status')} account={notification.get('account')} muted withDismiss hidden={this.props.hidden} />

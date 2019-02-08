@@ -15,5 +15,8 @@ export const searchEnabled = getMeta('search_enabled');
 export const maxChars = (initialState && initialState.max_toot_chars) || 500;
 export const invitesEnabled = getMeta('invites_enabled');
 export const version = getMeta('version');
+export const mascot = getMeta('mascot');
+export const profile_directory = getMeta('profile_directory');
+export const isStaff = getMeta('is_staff');
 
 export default initialState;

@@ -69,8 +69,12 @@ module ApplicationHelper
     tag(:meta, content: content, property: property)
   end
 
-  def react_component(name, props = {})
-    content_tag(:div, nil, data: { component: name.to_s.camelcase, props: Oj.dump(props) })
+  def react_component(name, props = {}, &block)
+    if block.nil?
+      content_tag(:div, nil, data: { component: name.to_s.camelcase, props: Oj.dump(props) })
+    else
+      content_tag(:div, data: { component: name.to_s.camelcase, props: Oj.dump(props) }, &block)
+    end
   end
 
   def body_classes
@@ -84,7 +88,7 @@ module ApplicationHelper
   end
 
   def cdn_host
-    ENV['CDN_HOST'].presence
+    Rails.configuration.action_controller.asset_host
   end
 
   def cdn_host?
@@ -92,10 +96,10 @@ module ApplicationHelper
   end
 
   def storage_host
-    ENV['S3_ALIAS_HOST'].presence || ENV['S3_CLOUDFRONT_HOST'].presence
+    "https://#{ENV['S3_ALIAS_HOST'].presence || ENV['S3_CLOUDFRONT_HOST']}"
   end
 
   def storage_host?
-    storage_host.present?
+    ENV['S3_ALIAS_HOST'].present? || ENV['S3_CLOUDFRONT_HOST'].present?
   end
 end

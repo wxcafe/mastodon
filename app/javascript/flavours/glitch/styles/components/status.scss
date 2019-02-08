@@ -731,12 +731,24 @@ a.status-card {
   display: block;
   margin-top: 5px;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-card__image {
   flex: 0 0 100px;
   background: lighten($ui-base-color, 8%);
   position: relative;
+
+  & > .fa {
+    font-size: 21px;
+    position: absolute;
+    transform-origin: 50% 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .status-card.horizontal {
@@ -753,6 +765,31 @@ a.status-card {
   .status-card__title {
     white-space: inherit;
   }
+}
+
+.status-card.compact {
+  border-color: lighten($ui-base-color, 4%);
+
+  &.interactive {
+    border: 0;
+  }
+
+  .status-card__content {
+    padding: 8px;
+    padding-top: 10px;
+  }
+
+  .status-card__title {
+    white-space: nowrap;
+  }
+
+  .status-card__image {
+    flex: 0 0 60px;
+  }
+}
+
+a.status-card.compact:hover {
+  background-color: lighten($ui-base-color, 4%);
 }
 
 .status-card__image-image {

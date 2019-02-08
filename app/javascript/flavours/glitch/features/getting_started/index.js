@@ -8,11 +8,12 @@ import { openModal } from 'flavours/glitch/actions/modal';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import ImmutablePureComponent from 'react-immutable-pure-component';
-import { me } from 'flavours/glitch/util/initial_state';
+import { me, invitesEnabled, version } from 'flavours/glitch/util/initial_state';
 import { fetchFollowRequests } from 'flavours/glitch/actions/accounts';
 import { List as ImmutableList } from 'immutable';
 import { createSelector } from 'reselect';
 import { fetchLists } from 'flavours/glitch/actions/lists';
+import { preferencesLink, profileLink, signOutLink } from 'flavours/glitch/util/backend_links';
 
 const messages = defineMessages({
   heading: { id: 'getting_started.heading', defaultMessage: 'Getting started' },
@@ -157,32 +158,29 @@ export default class GettingStarted extends ImmutablePureComponent {
             <ColumnSubheading text={intl.formatMessage(messages.lists_subheading)} />
             {listItems}
             <ColumnSubheading text={intl.formatMessage(messages.settings_subheading)} />
-            <ColumnLink icon='cog' text={intl.formatMessage(messages.preferences)} href='/settings/preferences' />
+            { preferencesLink !== undefined && <ColumnLink icon='cog' text={intl.formatMessage(messages.preferences)} href={preferencesLink} /> }
             <ColumnLink icon='cogs' text={intl.formatMessage(messages.settings)} onClick={openSettings} />
-            <ColumnLink icon='sign-out' text={intl.formatMessage(messages.sign_out)} href='/auth/sign_out' method='delete' />
+            <ColumnLink icon='sign-out' text={intl.formatMessage(messages.sign_out)} href={signOutLink} method='delete' />
           </div>
 
           <div className='getting-started__footer'>
-            <div className='static-content getting-started'>
-              <p>
-                <a href='https://docs.joinmastodon.org' target='_blank'>
-                  <FormattedMessage id='getting_started.documentation' defaultMessage='Documentation' />
-                </a>&nbsp;•&nbsp;
-                <a href='https://joinmastodon.org/apps' target='_blank' rel='noopener'>
-                  <FormattedMessage id='getting_started.appsshort' defaultMessage='Apps' />
-                </a>
-              </p>
-              <p>
-                <FormattedMessage
-                  id='getting_started.open_source_notice'
-                  defaultMessage='Glitchsoc is open source software, a friendly fork of {Mastodon}. You can contribute or report issues on GitHub at {github}.'
-                  values={{
-                    github: <a href='https://github.com/glitch-soc/mastodon' rel='noopener' target='_blank'>glitch-soc/mastodon</a>,
-                    Mastodon: <a href='https://github.com/tootsuite/mastodon' rel='noopener' target='_blank'>Mastodon</a>,
-                  }}
-                />
-              </p>
-            </div>
+            <ul>
+              {invitesEnabled && <li><a href='/invites' target='_blank'><FormattedMessage id='getting_started.invite' defaultMessage='Invite people' /></a> · </li>}
+              <li><a href='/about/more' target='_blank'><FormattedMessage id='navigation_bar.info' defaultMessage='About this instance' /></a> · </li>
+              <li><a href='https://joinmastodon.org/apps' target='_blank'><FormattedMessage id='navigation_bar.apps' defaultMessage='Mobile apps' /></a> · </li>
+              <li><a href='/terms' target='_blank'><FormattedMessage id='getting_started.terms' defaultMessage='Terms of service' /></a> · </li>
+              <li><a href='https://docs.joinmastodon.org' target='_blank'><FormattedMessage id='getting_started.documentation' defaultMessage='Documentation' /></a></li>
+            </ul>
+
+            <p>
+              <FormattedMessage
+                id='getting_started.open_source_notice'
+                defaultMessage='Glitchsoc is open source software, a friendly fork of {Mastodon}. You can contribute or report issues on GitHub at {github}.'
+                values={{
+                  github: <span><a href='https://github.com/glitch-soc/mastodon' rel='noopener' target='_blank'>glitch-soc/mastodon</a> (v{version})</span>,
+                  Mastodon: <a href='https://github.com/tootsuite/mastodon' rel='noopener' target='_blank'>Mastodon</a> }}
+              />
+            </p>
           </div>
         </div>
       </Column>

@@ -22,6 +22,9 @@ export const deleteModal = getMeta('delete_modal');
 export const me = getMeta('me');
 export const maxChars = (initialState && initialState.max_toot_chars) || 10000;
 export const searchEnabled = getMeta('search_enabled');
+export const invitesEnabled = getMeta('invites_enabled');
+export const version = getMeta('version');
+export const mascot = getMeta('mascot');
 export const isStaff = getMeta('is_staff');
 
 export default initialState;

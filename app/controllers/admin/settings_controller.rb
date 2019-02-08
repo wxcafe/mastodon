@@ -18,6 +18,7 @@ module Admin
       bootstrap_timeline_accounts
       flavour
       skin
+      flavour_and_skin
       thumbnail
       hero
       mascot
@@ -27,6 +28,8 @@ module Admin
       show_known_fediverse_at_about_page
       preview_sensitive_media
       custom_css
+      profile_directory
+      hide_followers_count
     ).freeze
 
     BOOLEAN_SETTINGS = %w(
@@ -38,6 +41,8 @@ module Admin
       peers_api_enabled
       show_known_fediverse_at_about_page
       preview_sensitive_media
+      profile_directory
+      hide_followers_count
     ).freeze
 
     UPLOAD_SETTINGS = %w(
@@ -54,7 +59,13 @@ module Admin
     def update
       authorize :settings, :update?
 
-      settings_params.each do |key, value|
+      settings = settings_params
+      flavours_and_skin = settings.delete('flavour_and_skin')
+      if flavours_and_skin
+        settings['flavour'], settings['skin'] = flavours_and_skin.split('/', 2)
+      end
+
+      settings.each do |key, value|
         if UPLOAD_SETTINGS.include?(key)
           upload = SiteUpload.where(var: key).first_or_initialize(var: key)
           upload.update(file: value)

@@ -95,12 +95,20 @@ export default class LocalSettingsPage extends React.PureComponent {
           >
             <FormattedMessage id='settings.navbar_under' defaultMessage='Navbar at the bottom (Mobile only)' />
           </LocalSettingsPageItem>
+          <LocalSettingsPageItem
+            settings={settings}
+            item={['swipe_to_change_columns']}
+            id='mastodon-settings--swipe_to_change_columns'
+            onChange={onChange}
+          >
+            <FormattedMessage id='settings.swipe_to_change_columns' defaultMessage='Allow swiping to change columns (Mobile only)' />
+          </LocalSettingsPageItem>
         </section>
       </div>
     ),
     ({ intl, onChange, settings }) => (
       <div className='glitch local-settings__page compose_box_opts'>
-        <h1><FormattedMessage id='settings.compose_box_opts' defaultMessage='Compose box options' /></h1>
+        <h1><FormattedMessage id='settings.compose_box_opts' defaultMessage='Compose box' /></h1>
         <LocalSettingsPageItem
           settings={settings}
           item={['always_show_spoilers_field']}
@@ -125,6 +133,14 @@ export default class LocalSettingsPage extends React.PureComponent {
           onChange={onChange}
         >
           <FormattedMessage id='settings.confirm_missing_media_description' defaultMessage='Show confirmation dialog before sending toots lacking media descriptions' />
+        </LocalSettingsPageItem>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['confirm_before_clearing_draft']}
+          id='mastodon-settings--confirm_before_clearing_draft'
+          onChange={onChange}
+        >
+          <FormattedMessage id='settings.confirm_before_clearing_draft' defaultMessage='Show confirmation dialog before overwriting the message being composed' />
         </LocalSettingsPageItem>
         <LocalSettingsPageItem
           settings={settings}
@@ -303,6 +319,14 @@ export default class LocalSettingsPage extends React.PureComponent {
           onChange={onChange}
         >
           <FormattedMessage id='settings.media_fullwidth' defaultMessage='Full-width media previews' />
+        </LocalSettingsPageItem>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['inline_preview_cards']}
+          id='mastodon-settings--inline-preview-cards'
+          onChange={onChange}
+        >
+          <FormattedMessage id='settings.inline_preview_cards' defaultMessage='Inline preview cards for external links' />
         </LocalSettingsPageItem>
       </div>
     ),
