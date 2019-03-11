@@ -26,7 +26,7 @@ class Formatter
     return '' if raw_content.blank?
 
     unless status.local?
-      html = reformat(raw_content)
+      html = sanitize(raw_content, Sanitize::Config::MASTODON_STRICT)
       html = encode_custom_emojis(html, status.emojis, options[:autoplay]) if options[:custom_emojify]
       return html.html_safe # rubocop:disable Rails/OutputSafety
     end
@@ -36,16 +36,42 @@ class Formatter
 
     html = raw_content
     html = "RT @#{prepend_reblog} #{html}" if prepend_reblog
+    html = format_markdown(html)
     html = encode_and_link_urls(html, linkable_accounts)
     html = encode_custom_emojis(html, status.emojis, options[:autoplay]) if options[:custom_emojify]
-    html = simple_format(html, {}, sanitize: false)
-    html = html.delete("\n")
 
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  def reformat(html)
-    sanitize(html, Sanitize::Config::MASTODON_STRICT)
+  def format_markdown(html, me = false)
+    extensions = {
+      autolink: true,
+      no_intra_emphasis: true,
+      fenced_code_blocks: true,
+      disable_indented_code_blocks: true,
+      strikethrough: true,
+      lax_spacing: true,
+      space_after_headers: true,
+      superscript: true,
+      underline: true,
+      highlight: true,
+      footnotes: true
+    }
+
+    options = {
+      link_attributes: { target: '_blank', rel: 'nofollow noopener' },
+      no_styles: true,
+    }
+
+    options[:link_attributes][:rel] += ' me' if me
+
+    renderer = Redcarpet::Render::Safe.new(options)
+    markdown = Redcarpet::Markdown.new(renderer, extensions)
+    markdown.render(html)
+  end
+
+  def reformat(html, escape = true)
+    html = sanitize(html, Sanitize::Config::MASTODON_STRICT)
   end
 
   def plaintext(status)
@@ -66,7 +92,7 @@ class Formatter
   end
 
   def format_spoiler(status, **options)
-    html = encode(status.spoiler_text)
+    html = format_markdown(status.spoiler_text)
     html = encode_custom_emojis(html, status.emojis, options[:autoplay])
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
@@ -85,15 +111,15 @@ class Formatter
 
   def format_field(account, str, **options)
     return reformat(str).html_safe unless account.local? # rubocop:disable Rails/OutputSafety
-    html = encode_and_link_urls(str, me: true)
+    html = format_markdown(str, true)
+    html = encode_and_link_urls(html, me: true)
     html = encode_custom_emojis(html, account.emojis, options[:autoplay]) if options[:custom_emojify]
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
   def linkify(text)
     html = encode_and_link_urls(text)
-    html = simple_format(html, {}, sanitize: false)
-    html = html.delete("\n")
+    html = format_markdown(html)
 
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
@@ -118,7 +144,8 @@ class Formatter
 
     rewrite(html.dup, entities) do |entity|
       if entity[:url]
-        link_to_url(entity, options)
+        #link_to_url(entity, options)
+        entity[:url]
       elsif entity[:hashtag]
         link_to_hashtag(entity)
       elsif entity[:screen_name]
@@ -199,12 +226,12 @@ class Formatter
 
     last_index = entities.reduce(0) do |index, entity|
       indices = entity.respond_to?(:indices) ? entity.indices : entity[:indices]
-      result << encode(chars[index...indices.first].join)
+      result << chars[index...indices.first].join
       result << yield(entity)
       indices.last
     end
 
-    result << encode(chars[last_index..-1].join)
+    result << chars[last_index..-1].join
 
     result.flatten.join
   end
@@ -264,7 +291,7 @@ class Formatter
 
     Twitter::Autolink.send(:link_to_text, entity, link_html(entity[:url]), url, html_attrs)
   rescue Addressable::URI::InvalidURIError, IDN::Idna::IdnaError
-    encode(entity[:url])
+    entity[:url]
   end
 
   def link_to_mention(entity, linkable_accounts)
