@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'singleton'
+require 'kramdown'
 require_relative './sanitize_config'
 
 class Formatter
@@ -77,8 +78,7 @@ class Formatter
   def plaintext(status)
     return status.text if status.local?
 
-    text = status.text.gsub(/(<br \/>|<br>|<\/p>)+/) { |match| "#{match}\n" }
-    strip_tags(text)
+    Kramdown::Document.new(html, input: :html).to_kramdown
   end
 
   def simplified_format(account, **options)
