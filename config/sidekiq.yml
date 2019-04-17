@@ -1,7 +1,7 @@
 ---
-:concurrency: 10
+:concurrency: 8
 :queues:
-  - [default, 6]
+  - [default, 2]
   - [push, 4]
   - [mailers, 2]
   - [pull]
