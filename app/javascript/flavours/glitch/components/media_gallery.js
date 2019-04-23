@@ -82,11 +82,6 @@ class Item extends React.PureComponent {
     e.stopPropagation();
   }
 
-  handleMouseDown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   render () {
     const { attachment, index, size, standalone, letterbox, displayWidth } = this.props;
 
@@ -190,7 +185,6 @@ class Item extends React.PureComponent {
             onClick={this.handleClick}
             onMouseEnter={this.handleMouseEnter}
             onMouseLeave={this.handleMouseLeave}
-            onMouseDown={this.handleMouseDown}
             autoPlay={autoPlay}
             loop
             muted
@@ -224,6 +218,8 @@ export default class MediaGallery extends React.PureComponent {
     size: PropTypes.object,
     onOpenMedia: PropTypes.func.isRequired,
     intl: PropTypes.object.isRequired,
+    defaultWidth: PropTypes.number,
+    cacheWidth: PropTypes.func,
   };
 
   static defaultProps = {
@@ -232,10 +228,11 @@ export default class MediaGallery extends React.PureComponent {
 
   state = {
     visible: this.props.revealed === undefined ? (displayMedia !== 'hide_all' && !this.props.sensitive || displayMedia === 'show_all') : this.props.revealed,
+    width: this.props.defaultWidth,
   };
 
   componentWillReceiveProps (nextProps) {
-    if (!is(nextProps.media, this.props.media)) {
+    if (!is(nextProps.media, this.props.media) || nextProps.revealed === true) {
       this.setState({ visible: nextProps.revealed === undefined ? (displayMedia !== 'hide_all' && !nextProps.sensitive || displayMedia === 'show_all') : nextProps.revealed });
     }
   }
@@ -259,6 +256,7 @@ export default class MediaGallery extends React.PureComponent {
   handleRef = (node) => {
     this.node = node;
     if (node && node.offsetWidth && node.offsetWidth != this.state.width) {
+      if (this.props.cacheWidth) this.props.cacheWidth(node.offsetWidth);
       this.setState({
         width: node.offsetWidth,
       });
@@ -271,9 +269,11 @@ export default class MediaGallery extends React.PureComponent {
   }
 
   render () {
-    const { media, intl, sensitive, letterbox, fullwidth } = this.props;
-    const { width, visible } = this.state;
+    const { media, intl, sensitive, letterbox, fullwidth, defaultWidth } = this.props;
+    const { visible } = this.state;
     const size = media.take(4).size;
+
+    const width = this.state.width || defaultWidth;
 
     let children;
 

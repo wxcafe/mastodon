@@ -103,6 +103,7 @@ export default class Video extends React.PureComponent {
     inline: PropTypes.bool,
     preventPlayback: PropTypes.bool,
     intl: PropTypes.object.isRequired,
+    cacheWidth: PropTypes.func,
   };
 
   state = {
@@ -111,12 +112,18 @@ export default class Video extends React.PureComponent {
     volume: 0.5,
     paused: true,
     dragging: false,
-    containerWidth: false,
+    containerWidth: this.props.width,
     fullscreen: false,
     hovered: false,
     muted: false,
     revealed: this.props.revealed === undefined ? (displayMedia !== 'hide_all' && !this.props.sensitive || displayMedia === 'show_all') : this.props.revealed,
   };
+
+  componentWillReceiveProps (nextProps) {
+    if (nextProps.revealed === true) {
+      this.setState({ revealed: true });
+    }
+  }
 
   // hard coded in components.scss
   // any way to get ::before values programatically?
@@ -131,6 +138,7 @@ export default class Video extends React.PureComponent {
     this.player = c;
 
     if (c && c.offsetWidth && c.offsetWidth != this.state.containerWidth) {
+      if (this.props.cacheWidth) this.props.cacheWidth(this.player.offsetWidth);
       this.setState({
         containerWidth: c.offsetWidth,
       });
@@ -275,6 +283,7 @@ export default class Video extends React.PureComponent {
 
   componentDidUpdate (prevProps) {
     if (this.player && this.player.offsetWidth && this.player.offsetWidth != this.state.containerWidth && !this.state.fullscreen) {
+      if (this.props.cacheWidth) this.props.cacheWidth(this.player.offsetWidth);
       this.setState({
         containerWidth: this.player.offsetWidth,
       });
@@ -363,7 +372,6 @@ export default class Video extends React.PureComponent {
       width  = containerWidth;
       height = containerWidth / (16/9);
 
-      playerStyle.width  = width;
       playerStyle.height = height;
     } else if (inline) {
       return (<div className={computedClass} ref={this.setPlayerRef} tabindex={0}></div>);

@@ -3,12 +3,21 @@
 class InitialStateSerializer < ActiveModel::Serializer
   attributes :meta, :compose, :accounts,
              :media_attachments, :settings,
-             :max_toot_chars
+             :max_toot_chars, :poll_limits
 
   has_one :push_subscription, serializer: REST::WebPushSubscriptionSerializer
 
   def max_toot_chars
     StatusLengthValidator::MAX_CHARS
+  end
+
+  def poll_limits
+    {
+      max_options: PollValidator::MAX_OPTIONS,
+      max_option_chars: PollValidator::MAX_OPTION_CHARS,
+      min_expiration: PollValidator::MIN_EXPIRATION,
+      max_expiration: PollValidator::MAX_EXPIRATION,
+    }
   end
 
   def meta
@@ -19,6 +28,8 @@ class InitialStateSerializer < ActiveModel::Serializer
       domain: Rails.configuration.x.local_domain,
       admin: object.admin&.id&.to_s,
       search_enabled: Chewy.enabled?,
+      repository: Mastodon::Version.repository,
+      source_url: Mastodon::Version.source_url,
       version: Mastodon::Version.to_s,
       invites_enabled: Setting.min_invite_role == 'user',
       mascot: instance_presenter.mascot&.file&.url,

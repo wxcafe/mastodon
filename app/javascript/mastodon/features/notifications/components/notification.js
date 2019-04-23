@@ -33,8 +33,12 @@ class Notification extends ImmutablePureComponent {
     onFavourite: PropTypes.func.isRequired,
     onReblog: PropTypes.func.isRequired,
     onToggleHidden: PropTypes.func.isRequired,
-    status: PropTypes.option,
+    status: ImmutablePropTypes.map,
     intl: PropTypes.object.isRequired,
+    getScrollPosition: PropTypes.func,
+    updateScrollBottom: PropTypes.func,
+    cacheMediaWidth: PropTypes.func,
+    cachedMediaWidth: PropTypes.number,
   };
 
   handleMoveUp = () => {
@@ -129,6 +133,10 @@ class Notification extends ImmutablePureComponent {
         onMoveDown={this.handleMoveDown}
         onMoveUp={this.handleMoveUp}
         contextType='notifications'
+        getScrollPosition={this.props.getScrollPosition}
+        updateScrollBottom={this.props.updateScrollBottom}
+        cachedMediaWidth={this.props.cachedMediaWidth}
+        cacheMediaWidth={this.props.cacheMediaWidth}
       />
     );
   }
@@ -149,7 +157,17 @@ class Notification extends ImmutablePureComponent {
             </span>
           </div>
 
-          <StatusContainer id={notification.get('status')} account={notification.get('account')} muted withDismiss hidden={!!this.props.hidden} />
+          <StatusContainer
+            id={notification.get('status')}
+            account={notification.get('account')}
+            muted
+            withDismiss
+            hidden={!!this.props.hidden}
+            getScrollPosition={this.props.getScrollPosition}
+            updateScrollBottom={this.props.updateScrollBottom}
+            cachedMediaWidth={this.props.cachedMediaWidth}
+            cacheMediaWidth={this.props.cacheMediaWidth}
+          />
         </div>
       </HotKeys>
     );
@@ -171,7 +189,49 @@ class Notification extends ImmutablePureComponent {
             </span>
           </div>
 
-          <StatusContainer id={notification.get('status')} account={notification.get('account')} muted withDismiss hidden={this.props.hidden} />
+          <StatusContainer
+            id={notification.get('status')}
+            account={notification.get('account')}
+            muted
+            withDismiss
+            hidden={this.props.hidden}
+            getScrollPosition={this.props.getScrollPosition}
+            updateScrollBottom={this.props.updateScrollBottom}
+            cachedMediaWidth={this.props.cachedMediaWidth}
+            cacheMediaWidth={this.props.cacheMediaWidth}
+          />
+        </div>
+      </HotKeys>
+    );
+  }
+
+  renderPoll (notification) {
+    const { intl } = this.props;
+
+    return (
+      <HotKeys handlers={this.getHandlers()}>
+        <div className='notification notification-poll focusable' tabIndex='0' aria-label={notificationForScreenReader(intl, intl.formatMessage({ id: 'notification.poll', defaultMessage: 'A poll you have voted in has ended' }), notification.get('created_at'))}>
+          <div className='notification__message'>
+            <div className='notification__favourite-icon-wrapper'>
+              <Icon id='tasks' fixedWidth />
+            </div>
+
+            <span title={notification.get('created_at')}>
+              <FormattedMessage id='notification.poll' defaultMessage='A poll you have voted in has ended' />
+            </span>
+          </div>
+
+          <StatusContainer
+            id={notification.get('status')}
+            account={notification.get('account')}
+            muted
+            withDismiss
+            hidden={this.props.hidden}
+            getScrollPosition={this.props.getScrollPosition}
+            updateScrollBottom={this.props.updateScrollBottom}
+            cachedMediaWidth={this.props.cachedMediaWidth}
+            cacheMediaWidth={this.props.cacheMediaWidth}
+          />
         </div>
       </HotKeys>
     );
@@ -192,6 +252,8 @@ class Notification extends ImmutablePureComponent {
       return this.renderFavourite(notification, link);
     case 'reblog':
       return this.renderReblog(notification, link);
+    case 'poll':
+      return this.renderPoll(notification);
     }
 
     return null;

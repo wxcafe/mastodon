@@ -6,15 +6,17 @@ import { fetchAccount } from 'flavours/glitch/actions/accounts';
 import { expandAccountMediaTimeline } from 'flavours/glitch/actions/timelines';
 import LoadingIndicator from 'flavours/glitch/components/loading_indicator';
 import Column from 'flavours/glitch/features/ui/components/column';
-import ColumnBackButton from 'flavours/glitch/components/column_back_button';
+import ProfileColumnHeader from 'flavours/glitch/features/account/components/profile_column_header';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { getAccountGallery } from 'flavours/glitch/selectors';
 import MediaItem from './components/media_item';
 import HeaderContainer from 'flavours/glitch/features/account_timeline/containers/header_container';
 import { ScrollContainer } from 'react-router-scroll-4';
 import LoadMore from 'flavours/glitch/components/load_more';
+import MissingIndicator from 'flavours/glitch/components/missing_indicator';
 
 const mapStateToProps = (state, props) => ({
+  isAccount: !!state.getIn(['accounts', props.params.accountId]),
   medias: getAccountGallery(state, props.params.accountId),
   isLoading: state.getIn(['timelines', `account:${props.params.accountId}:media`, 'isLoading']),
   hasMore:   state.getIn(['timelines', `account:${props.params.accountId}:media`, 'hasMore']),
@@ -51,6 +53,7 @@ export default class AccountGallery extends ImmutablePureComponent {
     medias: ImmutablePropTypes.list.isRequired,
     isLoading: PropTypes.bool,
     hasMore: PropTypes.bool,
+    isAccount: PropTypes.bool,
   };
 
   componentDidMount () {
@@ -63,6 +66,10 @@ export default class AccountGallery extends ImmutablePureComponent {
       this.props.dispatch(fetchAccount(nextProps.params.accountId));
       this.props.dispatch(expandAccountMediaTimeline(this.props.params.accountId));
     }
+  }
+
+  handleHeaderClick = () => {
+    this.column.scrollTop();
   }
 
   handleScrollToBottom = () => {
@@ -94,8 +101,20 @@ export default class AccountGallery extends ImmutablePureComponent {
     return !(location.state && location.state.mastodonModalOpen);
   }
 
+  setRef = c => {
+    this.column = c;
+  }
+
   render () {
-    const { medias, isLoading, hasMore } = this.props;
+    const { medias, isLoading, hasMore, isAccount } = this.props;
+
+    if (!isAccount) {
+      return (
+        <Column>
+          <MissingIndicator />
+        </Column>
+      );
+    }
 
     let loadOlder = null;
 
@@ -112,8 +131,8 @@ export default class AccountGallery extends ImmutablePureComponent {
     }
 
     return (
-      <Column>
-        <ColumnBackButton />
+      <Column ref={this.setRef}>
+        <ProfileColumnHeader onClick={this.handleHeaderClick} />
 
         <ScrollContainer scrollKey='account_gallery' shouldUpdateScroll={this.shouldUpdateScroll}>
           <div className='scrollable scrollable--flex' onScroll={this.handleScroll}>

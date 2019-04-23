@@ -14,6 +14,7 @@ import Video from 'flavours/glitch/features/video';
 import VisibilityIcon from 'flavours/glitch/components/status_visibility_icon';
 import scheduleIdleTask from 'flavours/glitch/util/schedule_idle_task';
 import classNames from 'classnames';
+import PollContainer from 'flavours/glitch/containers/poll_container';
 
 export default class DetailedStatus extends ImmutablePureComponent {
 
@@ -22,7 +23,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
   };
 
   static propTypes = {
-    status: ImmutablePropTypes.map.isRequired,
+    status: ImmutablePropTypes.map,
     settings: ImmutablePropTypes.map.isRequired,
     onOpenMedia: PropTypes.func.isRequired,
     onOpenVideo: PropTypes.func.isRequired,
@@ -41,7 +42,9 @@ export default class DetailedStatus extends ImmutablePureComponent {
   handleAccountClick = (e) => {
     if (e.button === 0 && !(e.ctrlKey || e.altKey || e.metaKey) && this.context.router) {
       e.preventDefault();
-      this.context.router.history.push(`/accounts/${this.props.status.getIn(['account', 'id'])}`);
+      let state = {...this.context.router.history.location.state};
+      state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+      this.context.router.history.push(`/accounts/${this.props.status.getIn(['account', 'id'])}`, state);
     }
 
     e.stopPropagation();
@@ -50,7 +53,9 @@ export default class DetailedStatus extends ImmutablePureComponent {
   parseClick = (e, destination) => {
     if (e.button === 0 && !(e.ctrlKey || e.altKey || e.metaKey) && this.context.router) {
       e.preventDefault();
-      this.context.router.history.push(destination);
+      let state = {...this.context.router.history.location.state};
+      state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+      this.context.router.history.push(destination, state);
     }
 
     e.stopPropagation();
@@ -98,7 +103,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
   }
 
   render () {
-    const status = this.props.status.get('reblog') ? this.props.status.get('reblog') : this.props.status;
+    const status = (this.props.status && this.props.status.get('reblog')) ? this.props.status.get('reblog') : this.props.status;
     const { expanded, onToggleHidden, settings } = this.props;
     const outerStyle = { boxSizing: 'border-box' };
     const { compact } = this.props;
@@ -118,7 +123,9 @@ export default class DetailedStatus extends ImmutablePureComponent {
       outerStyle.height = `${this.state.height}px`;
     }
 
-    if (status.get('media_attachments').size > 0) {
+    if (status.get('poll')) {
+      media = <PollContainer pollId={status.get('poll')} />;
+    } else if (status.get('media_attachments').size > 0) {
       if (status.get('media_attachments').some(item => item.get('type') === 'unknown')) {
         media = <AttachmentList media={status.get('media_attachments')} />;
       } else if (status.getIn(['media_attachments', 0, 'type']) === 'video') {
@@ -135,6 +142,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
             preventPlayback={!expanded}
             onOpenVideo={this.handleOpenVideo}
             autoplay
+            revealed={settings.getIn(['media', 'reveal_behind_cw']) && !!status.get('spoiler_text') ? true : undefined}
           />
         );
         mediaIcon = 'video-camera';
@@ -148,6 +156,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
             fullwidth={settings.getIn(['media', 'fullwidth'])}
             hidden={!expanded}
             onOpenMedia={this.props.onOpenMedia}
+            revealed={settings.getIn(['media', 'reveal_behind_cw']) && !!status.get('spoiler_text') ? true : undefined}
           />
         );
         mediaIcon = 'picture-o';
@@ -223,6 +232,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
             onExpandedToggle={onToggleHidden}
             parseClick={this.parseClick}
             onUpdate={this.handleChildUpdate}
+            disabled
           />
 
           <div className='detailed-status__meta'>
