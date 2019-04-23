@@ -7,17 +7,38 @@ import StatusIcons from './status_icons';
 import StatusContent from './status_content';
 import StatusActionBar from './status_action_bar';
 import AttachmentList from './attachment_list';
-import { FormattedMessage } from 'react-intl';
+import Card from '../features/status/components/card';
+import { injectIntl, FormattedMessage } from 'react-intl';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { MediaGallery, Video } from 'flavours/glitch/util/async-components';
 import { HotKeys } from 'react-hotkeys';
 import NotificationOverlayContainer from 'flavours/glitch/features/notifications/containers/overlay_container';
 import classNames from 'classnames';
+import { autoUnfoldCW } from 'flavours/glitch/util/content_warning';
+import PollContainer from 'flavours/glitch/containers/poll_container';
 
 // We use the component (and not the container) since we do not want
 // to use the progress bar to show download progress
 import Bundle from '../features/ui/components/bundle';
 
+export const textForScreenReader = (intl, status, rebloggedByText = false, expanded = false) => {
+  const displayName = status.getIn(['account', 'display_name']);
+
+  const values = [
+    displayName.length === 0 ? status.getIn(['account', 'acct']).split('@')[0] : displayName,
+    status.get('spoiler_text') && !expanded ? status.get('spoiler_text') : status.get('search_index').slice(status.get('spoiler_text').length),
+    intl.formatDate(status.get('created_at'), { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }),
+    status.getIn(['account', 'acct']),
+  ];
+
+  if (rebloggedByText) {
+    values.push(rebloggedByText);
+  }
+
+  return values.join(', ');
+};
+
+@injectIntl
 export default class Status extends ImmutablePureComponent {
 
   static contextTypes = {
@@ -51,11 +72,15 @@ export default class Status extends ImmutablePureComponent {
     getScrollPosition: PropTypes.func,
     updateScrollBottom: PropTypes.func,
     expanded: PropTypes.bool,
+    intl: PropTypes.object.isRequired,
+    cacheMediaWidth: PropTypes.func,
+    cachedMediaWidth: PropTypes.number,
   };
 
   state = {
     isCollapsed: false,
     autoCollapsed: false,
+    isExpanded: undefined,
   }
 
   // Avoid checking props that are functions (and whose equality will always
@@ -123,6 +148,17 @@ export default class Status extends ImmutablePureComponent {
       updated = true;
     }
 
+    if (nextProps.expanded === undefined &&
+      prevState.isExpanded === undefined &&
+      update.isExpanded === undefined
+    ) {
+      const isExpanded = autoUnfoldCW(nextProps.settings, nextProps.status);
+      if (isExpanded !== undefined) {
+        update.isExpanded = isExpanded;
+        updated = true;
+      }
+    }
+
     return updated ? update : null;
   }
 
@@ -181,6 +217,8 @@ export default class Status extends ImmutablePureComponent {
       // Hack to fix timeline jumps on second rendering when auto-collapsing
       this.setState({ autoCollapsed: true });
     }
+
+    this.didShowCard  = !this.props.muted && !this.props.hidden && this.props.status && this.props.status.get('card') && this.props.settings.get('inline_preview_cards');
   }
 
   getSnapshotBeforeUpdate (prevProps, prevState) {
@@ -193,12 +231,23 @@ export default class Status extends ImmutablePureComponent {
 
   //  Hack to fix timeline jumps on second rendering when auto-collapsing
   componentDidUpdate (prevProps, prevState, snapshot) {
-    if (this.state.autoCollapsed) {
-      this.setState({ autoCollapsed: false });
+    const doShowCard  = !this.props.muted && !this.props.hidden && this.props.status && this.props.status.get('card') && this.props.settings.get('inline_preview_cards');
+    if (this.state.autoCollapsed || (doShowCard && !this.didShowCard)) {
+      if (doShowCard) this.didShowCard = true;
+      if (this.state.autoCollapsed) this.setState({ autoCollapsed: false });
       if (snapshot !== null && this.props.updateScrollBottom) {
         if (this.node.offsetTop < snapshot.top) {
           this.props.updateScrollBottom(snapshot.height - snapshot.top);
         }
+      }
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.node && this.props.getScrollPosition) {
+      const position = this.props.getScrollPosition();
+      if (position !== null && this.node.offsetTop < position.top) {
+         requestAnimationFrame(() => { this.props.updateScrollBottom(position.height - position.top); });
       }
     }
   }
@@ -246,7 +295,11 @@ export default class Status extends ImmutablePureComponent {
       else if (e.shiftKey) {
         this.setCollapsed(true);
         document.getSelection().removeAllRanges();
-      } else router.history.push(destination);
+      } else {
+        let state = {...router.history.location.state};
+        state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+        router.history.push(destination, state);
+      }
       e.preventDefault();
     }
   }
@@ -255,7 +308,9 @@ export default class Status extends ImmutablePureComponent {
     if (this.context.router && e.button === 0) {
       const id = e.currentTarget.getAttribute('data-id');
       e.preventDefault();
-      this.context.router.history.push(`/accounts/${id}`);
+      let state = {...this.context.router.history.location.state};
+      state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+      this.context.router.history.push(`/accounts/${id}`, state);
     }
   }
 
@@ -288,11 +343,15 @@ export default class Status extends ImmutablePureComponent {
   }
 
   handleHotkeyOpen = () => {
-    this.context.router.history.push(`/statuses/${this.props.status.get('id')}`);
+    let state = {...this.context.router.history.location.state};
+    state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+    this.context.router.history.push(`/statuses/${this.props.status.get('id')}`, state);
   }
 
   handleHotkeyOpenProfile = () => {
-    this.context.router.history.push(`/accounts/${this.props.status.getIn(['account', 'id'])}`);
+    let state = {...this.context.router.history.location.state};
+    state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+    this.context.router.history.push(`/accounts/${this.props.status.getIn(['account', 'id'])}`, state);
   }
 
   handleHotkeyMoveUp = e => {
@@ -324,6 +383,7 @@ export default class Status extends ImmutablePureComponent {
     } = this;
     const { router } = this.context;
     const {
+      intl,
       status,
       account,
       settings,
@@ -350,15 +410,7 @@ export default class Status extends ImmutablePureComponent {
 
     if (hidden) {
       return (
-        <div
-          ref={this.handleRef}
-          data-id={status.get('id')}
-          style={{
-            height: `${this.height}px`,
-            opacity: 0,
-            overflow: 'hidden',
-          }}
-        >
+        <div ref={this.handleRef}>
           {status.getIn(['account', 'display_name']) || status.getIn(['account', 'username'])}
           {' '}
           {status.get('content')}
@@ -374,7 +426,7 @@ export default class Status extends ImmutablePureComponent {
 
       return (
         <HotKeys handlers={minHandlers}>
-          <div className='status__wrapper status__wrapper--filtered focusable' tabIndex='0'>
+          <div className='status__wrapper status__wrapper--filtered focusable' tabIndex='0' ref={this.handleRef}>
             <FormattedMessage id='status.filtered' defaultMessage='Filtered' />
           </div>
         </HotKeys>
@@ -396,7 +448,10 @@ export default class Status extends ImmutablePureComponent {
     //  `media`, we snatch the thumbnail to use as our `background` if media
     //  backgrounds for collapsed statuses are enabled.
     attachments = status.get('media_attachments');
-    if (attachments.size > 0) {
+    if (status.get('poll')) {
+      media = <PollContainer pollId={status.get('poll')} />;
+      mediaIcon = 'tasks';
+    } else if (attachments.size > 0) {
       if (muted || attachments.some(item => item.get('type') === 'unknown')) {
         media = (
           <AttachmentList
@@ -412,11 +467,16 @@ export default class Status extends ImmutablePureComponent {
             {Component => (<Component
               preview={video.get('preview_url')}
               src={video.get('url')}
+              alt={video.get('description')}
               inline
               sensitive={status.get('sensitive')}
               letterbox={settings.getIn(['media', 'letterbox'])}
               fullwidth={settings.getIn(['media', 'fullwidth'])}
+              preventPlayback={isCollapsed || !isExpanded}
               onOpenVideo={this.handleOpenVideo}
+              width={this.props.cachedMediaWidth}
+              cacheWidth={this.props.cacheMediaWidth}
+              revealed={settings.getIn(['media', 'reveal_behind_cw']) && !!status.get('spoiler_text') ? true : undefined}
             />)}
           </Bundle>
         );
@@ -430,7 +490,11 @@ export default class Status extends ImmutablePureComponent {
                 sensitive={status.get('sensitive')}
                 letterbox={settings.getIn(['media', 'letterbox'])}
                 fullwidth={settings.getIn(['media', 'fullwidth'])}
+                hidden={isCollapsed || !isExpanded}
                 onOpenMedia={this.props.onOpenMedia}
+                cacheWidth={this.props.cacheMediaWidth}
+                defaultWidth={this.props.cachedMediaWidth}
+                revealed={settings.getIn(['media', 'reveal_behind_cw']) && !!status.get('spoiler_text') ? true : undefined}
               />
             )}
           </Bundle>
@@ -441,6 +505,17 @@ export default class Status extends ImmutablePureComponent {
       if (!status.get('sensitive') && !(status.get('spoiler_text').length > 0) && settings.getIn(['collapsed', 'backgrounds', 'preview_images'])) {
         background = attachments.getIn([0, 'preview_url']);
       }
+    } else if (status.get('card') && settings.get('inline_preview_cards')) {
+      media = (
+        <Card
+          onOpenMedia={this.props.onOpenMedia}
+          card={status.get('card')}
+          compact
+          cacheWidth={this.props.cacheMediaWidth}
+          defaultWidth={this.props.cachedMediaWidth}
+        />
+      );
+      mediaIcon = 'link';
     }
 
     //  Here we prepare extra data-* attributes for CSS selectors.
@@ -459,6 +534,12 @@ export default class Status extends ImmutablePureComponent {
       selectorAttribs[`data-${notifKind}-by`] = `@${account.get('acct')}`;
     }
 
+    let rebloggedByText;
+
+    if (prepend === 'reblog') {
+      rebloggedByText = intl.formatMessage({ id: 'status.reblogged_by', defaultMessage: '{name} boosted' }, { name: account.get('acct') });
+    }
+
     const handlers = {
       reply: this.handleHotkeyReply,
       favourite: this.handleHotkeyFavourite,
@@ -474,6 +555,7 @@ export default class Status extends ImmutablePureComponent {
     const computedClass = classNames('status', `status-${status.get('visibility')}`, {
       collapsed: isCollapsed,
       'has-background': isCollapsed && background,
+      'status__wrapper-reply': !!status.get('in_reply_to_id'),
       muted,
     }, 'focusable');
 
@@ -486,6 +568,7 @@ export default class Status extends ImmutablePureComponent {
           ref={handleRef}
           tabIndex='0'
           data-featured={featured ? 'true' : null}
+          aria-label={textForScreenReader(intl, status, rebloggedByText, !status.get('hidden'))}
         >
           <header className='status__info'>
             <span>
@@ -523,7 +606,7 @@ export default class Status extends ImmutablePureComponent {
             parseClick={parseClick}
             disabled={!router}
           />
-          {!isCollapsed || !muted ? (
+          {!isCollapsed || !(muted || !settings.getIn(['collapsed', 'show_action_bar'])) ? (
             <StatusActionBar
               {...other}
               status={status}

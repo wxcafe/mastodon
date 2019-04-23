@@ -12,12 +12,22 @@ export default class Permalink extends React.PureComponent {
     href: PropTypes.string.isRequired,
     to: PropTypes.string.isRequired,
     children: PropTypes.node,
+    onInterceptClick: PropTypes.func,
   };
 
   handleClick = (e) => {
-    if (this.context.router && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      this.context.router.history.push(this.props.to);
+    if (e.button === 0 && !(e.ctrlKey || e.metaKey)) {
+      if (this.props.onInterceptClick && this.props.onInterceptClick()) {
+        e.preventDefault();
+        return;
+      }
+
+      if (this.context.router) {
+        e.preventDefault();
+        let state = {...this.context.router.history.location.state};
+        state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+        this.context.router.history.push(this.props.to, state);
+      }
     }
   }
 
@@ -27,6 +37,7 @@ export default class Permalink extends React.PureComponent {
       className,
       href,
       to,
+      onInterceptClick,
       ...other
     } = this.props;
 

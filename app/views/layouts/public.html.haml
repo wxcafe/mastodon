@@ -1,17 +1,22 @@
 - content_for :content do
   .public-layout
-    .container
-      %nav.header
-        .nav-left
-          = link_to root_url, class: 'brand' do
-            = image_tag asset_pack_path('logo_full.svg'), alt: 'Mastodon'
-        .nav-center
-        .nav-right
-          - if user_signed_in?
-            = link_to t('settings.back'), root_url, class: 'nav-link nav-button webapp-btn'
-          - else
-            = link_to t('auth.login'), new_user_session_path, class: 'webapp-btn nav-link nav-button'
-            = link_to t('auth.register'), new_user_registration_path, class: 'webapp-btn nav-link nav-button'
+    - unless @hide_navbar
+      .container
+        %nav.header
+          .nav-left
+            = link_to root_url, class: 'brand' do
+              = image_pack_tag 'logo_full.svg', alt: 'Mastodon'
+
+            = link_to t('directories.directory'), explore_path, class: 'nav-link optional' if Setting.profile_directory
+            = link_to t('about.about_this'), about_more_path, class: 'nav-link optional'
+            = link_to t('about.apps'), 'https://joinmastodon.org/apps', class: 'nav-link optional'
+          .nav-center
+          .nav-right
+            - if user_signed_in?
+              = link_to t('settings.back'), root_url, class: 'nav-link nav-button webapp-btn'
+            - else
+              = link_to t('auth.login'), new_user_session_path, class: 'webapp-btn nav-link nav-button'
+              = link_to t('auth.register'), available_sign_up_path, class: 'webapp-btn nav-link nav-button'
 
     .container= yield
 
@@ -26,8 +31,8 @@
           .column-1
             %h4= t 'footer.developers'
             %ul
-              %li= link_to t('about.documentation'), 'https://github.com/tootsuite/documentation'
-              %li= link_to t('about.api'), 'https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md'
+              %li= link_to t('about.documentation'), 'https://docs.joinmastodon.org/'
+              %li= link_to t('about.api'), 'https://docs.joinmastodon.org/api/guidelines/'
           .column-2
             %h4= link_to t('about.what_is_mastodon'), 'https://joinmastodon.org/'
 

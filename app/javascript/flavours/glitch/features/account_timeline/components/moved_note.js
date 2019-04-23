@@ -20,7 +20,9 @@ export default class MovedNote extends ImmutablePureComponent {
   handleAccountClick = e => {
     if (e.button === 0) {
       e.preventDefault();
-      this.context.router.history.push(`/accounts/${this.props.to.get('id')}`);
+      let state = {...this.context.router.history.location.state};
+      state.mastodonBackSteps = (state.mastodonBackSteps || 0) + 1;
+      this.context.router.history.push(`/accounts/${this.props.to.get('id')}`, state);
     }
 
     e.stopPropagation();
@@ -34,7 +36,7 @@ export default class MovedNote extends ImmutablePureComponent {
       <div className='account__moved-note'>
         <div className='account__moved-note__message'>
           <div className='account__moved-note__icon-wrapper'><i className='fa fa-fw fa-suitcase account__moved-note__icon' /></div>
-          <FormattedMessage id='account.moved_to' defaultMessage='{name} has moved to:' values={{ name: <strong dangerouslySetInnerHTML={displayNameHtml} /> }} />
+          <FormattedMessage id='account.moved_to' defaultMessage='{name} has moved to:' values={{ name: <bdi><strong dangerouslySetInnerHTML={displayNameHtml} /></bdi> }} />
         </div>
 
         <a href={to.get('url')} onClick={this.handleAccountClick} className='detailed-status__display-name'>

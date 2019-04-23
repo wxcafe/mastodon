@@ -2,8 +2,8 @@ export function EmojiPicker () {
   return import(/* webpackChunkName: "flavours/glitch/async/emoji_picker" */'flavours/glitch/util/emoji/emoji_picker');
 }
 
-export function Drawer () {
-  return import(/* webpackChunkName: "flavours/glitch/async/drawer" */'flavours/glitch/features/drawer');
+export function Compose () {
+  return import(/* webpackChunkName: "flavours/glitch/async/compose" */'flavours/glitch/features/compose');
 }
 
 export function Notifications () {
@@ -144,4 +144,8 @@ export function EmbedModal () {
 
 export function GettingStartedMisc () {
   return import(/* webpackChunkName: "flavours/glitch/async/getting_started_misc" */'flavours/glitch/features/getting_started_misc');
+}
+
+export function ListAdder () {
+  return import(/* webpackChunkName: "features/glitch/async/list_adder" */'flavours/glitch/features/list_adder');
 }

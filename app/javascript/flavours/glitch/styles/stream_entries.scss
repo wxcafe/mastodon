@@ -36,7 +36,8 @@
 
     &:last-child {
       .detailed-status,
-      .status {
+      .status,
+      .load-more {
         border-bottom: 0;
         border-radius: 0 0 4px 4px;
       }
@@ -44,13 +45,15 @@
 
     &:first-child {
       .detailed-status,
-      .status {
+      .status,
+      .load-more {
         border-radius: 4px 4px 0 0;
       }
 
       &:last-child {
         .detailed-status,
-        .status {
+        .status,
+        .load-more {
           border-radius: 4px;
         }
       }
@@ -58,10 +61,15 @@
 
     @media screen and (max-width: 740px) {
       .detailed-status,
-      .status {
+      .status,
+      .load-more {
         border-radius: 0 !important;
       }
     }
+  }
+
+  &--highlighted .entry {
+    background: lighten($ui-base-color, 8%);
   }
 }
 
@@ -98,6 +106,35 @@
 
     svg path:last-child {
       fill: lighten($ui-highlight-color, 10%);
+    }
+  }
+
+  &:disabled,
+  &.disabled {
+    svg path:last-child {
+      fill: $ui-primary-color;
+    }
+
+    &:active,
+    &:focus,
+    &:hover {
+      background: $ui-primary-color;
+
+      svg path:last-child {
+        fill: $ui-primary-color;
+      }
+    }
+  }
+
+  &.button--destructive {
+    &:active,
+    &:focus,
+    &:hover {
+      background: $error-red;
+
+      svg path:last-child {
+        fill: $error-red;
+      }
     }
   }
 
@@ -155,12 +192,6 @@
 .embed,
 .public-layout {
   .status {
-    .status__info .status__display-name {
-      display: block;
-      max-width: 100%;
-      padding-right: 25px;
-    }
-
     .status__info {
       font-size: 15px;
       display: initial;
@@ -178,8 +209,13 @@
     .status__info .status__display-name {
       display: block;
       max-width: 100%;
+      padding: 6px 0;
       padding-right: 25px;
       margin: initial;
+
+      .display-name strong {
+        display: inline;
+      }
     }
 
     .status__avatar {
@@ -187,6 +223,14 @@
       position: absolute;
       width: 48px;
       margin: initial;
+    }
+  }
+}
+
+.rtl {
+  .embed, .public-layout {
+    .status .status__relative-time {
+      float: left;
     }
   }
 }

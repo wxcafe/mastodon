@@ -48,6 +48,12 @@ class ActivityPub::TagManager
     activity_account_status_url(target.account, target)
   end
 
+  def replies_uri_for(target, page_params = nil)
+    raise ArgumentError, 'target must be a local activity' unless %i(note comment activity).include?(target.object_type) && target.local?
+
+    replies_account_status_url(target.account, target, page_params)
+  end
+
   # Primary audience of a status
   # Public statuses go out to primarily the public collection
   # Unlisted and private statuses go out primarily to the followers collection
@@ -58,8 +64,8 @@ class ActivityPub::TagManager
       [COLLECTIONS[:public]]
     when 'unlisted', 'private'
       [account_followers_url(status.account)]
-    when 'direct'
-      status.mentions.map { |mention| uri_for(mention.account) }
+    when 'direct', 'limited'
+      status.active_mentions.map { |mention| uri_for(mention.account) }
     end
   end
 
@@ -80,7 +86,7 @@ class ActivityPub::TagManager
       cc << COLLECTIONS[:public]
     end
 
-    cc.concat(status.mentions.map { |mention| uri_for(mention.account) }) unless status.direct_visibility?
+    cc.concat(status.active_mentions.map { |mention| uri_for(mention.account) }) unless status.direct_visibility? || status.limited_visibility?
 
     cc
   end

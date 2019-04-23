@@ -15,7 +15,6 @@ import settings from './settings';
 import local_settings from './local_settings';
 import push_notifications from './push_notifications';
 import status_lists from './status_lists';
-import cards from './cards';
 import mutes from './mutes';
 import reports from './reports';
 import contexts from './contexts';
@@ -27,8 +26,12 @@ import height_cache from './height_cache';
 import custom_emojis from './custom_emojis';
 import lists from './lists';
 import listEditor from './list_editor';
+import listAdder from './list_adder';
 import filters from './filters';
+import suggestions from './suggestions';
 import pinnedAccountsEditor from './pinned_accounts_editor';
+import polls from './polls';
+import identity_proofs from './identity_proofs';
 
 const reducers = {
   dropdown_menu,
@@ -47,7 +50,6 @@ const reducers = {
   settings,
   local_settings,
   push_notifications,
-  cards,
   mutes,
   reports,
   contexts,
@@ -57,10 +59,14 @@ const reducers = {
   notifications,
   height_cache,
   custom_emojis,
+  identity_proofs,
   lists,
   listEditor,
+  listAdder,
   filters,
+  suggestions,
   pinnedAccountsEditor,
+  polls,
 };
 
 export default combineReducers(reducers);

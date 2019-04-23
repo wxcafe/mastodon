@@ -9,11 +9,11 @@ module Mastodon
     end
 
     def minor
-      4
+      8
     end
 
     def patch
-      3
+      0
     end
 
     def pre
@@ -28,8 +28,12 @@ module Mastodon
       [major, minor, patch, pre].compact
     end
 
+    def suffix
+      '+glitch'
+    end
+
     def to_s
-      [to_a.join('.'), flags].join
+      [to_a.join('.'), flags, suffix].join
     end
 
     def repository

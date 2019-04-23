@@ -1,27 +1,17 @@
 //  This file will be loaded on settings pages, regardless of theme.
 
-const { length } = require('stringz');
+import escapeTextContentForBrowser from 'escape-html';
 const { delegate } = require('rails-ujs');
 import emojify from '../mastodon/features/emoji/emoji';
 
 delegate(document, '#account_display_name', 'input', ({ target }) => {
-  const nameCounter = document.querySelector('.name-counter');
-  const name        = document.querySelector('.card .display-name strong');
-
-  if (nameCounter) {
-    nameCounter.textContent = 30 - length(target.value);
-  }
-
+  const name = document.querySelector('.card .display-name strong');
   if (name) {
-    name.innerHTML = emojify(target.value);
-  }
-});
-
-delegate(document, '#account_note', 'input', ({ target }) => {
-  const noteCounter = document.querySelector('.note-counter');
-
-  if (noteCounter) {
-    noteCounter.textContent = 500 - length(target.value);
+    if (target.value) {
+      name.innerHTML = emojify(escapeTextContentForBrowser(target.value));
+    } else {
+      name.textContent = document.querySelector('#default_account_display_name').textContent;
+    }
   }
 });
 
@@ -49,4 +39,36 @@ delegate(document, '#account_locked', 'change', ({ target }) => {
   } else {
     lock.style.display = 'none';
   }
+});
+
+delegate(document, '.input-copy input', 'click', ({ target }) => {
+  target.focus();
+  target.select();
+  target.setSelectionRange(0, target.value.length);
+});
+
+delegate(document, '.input-copy button', 'click', ({ target }) => {
+  const input = target.parentNode.querySelector('.input-copy__wrapper input');
+
+  const oldReadOnly = input.readonly;
+
+  input.readonly = false;
+  input.focus();
+  input.select();
+  input.setSelectionRange(0, input.value.length);
+
+  try {
+    if (document.execCommand('copy')) {
+      input.blur();
+      target.parentNode.classList.add('copied');
+
+    setTimeout(() => {
+        target.parentNode.classList.remove('copied');
+      }, 700);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  input.readonly = oldReadOnly;
 });

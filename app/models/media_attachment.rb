@@ -3,20 +3,21 @@
 #
 # Table name: media_attachments
 #
-#  id                :bigint(8)        not null, primary key
-#  status_id         :bigint(8)
-#  file_file_name    :string
-#  file_content_type :string
-#  file_file_size    :integer
-#  file_updated_at   :datetime
-#  remote_url        :string           default(""), not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  shortcode         :string
-#  type              :integer          default("image"), not null
-#  file_meta         :json
-#  account_id        :bigint(8)
-#  description       :text
+#  id                  :bigint(8)        not null, primary key
+#  status_id           :bigint(8)
+#  file_file_name      :string
+#  file_content_type   :string
+#  file_file_size      :integer
+#  file_updated_at     :datetime
+#  remote_url          :string           default(""), not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  shortcode           :string
+#  type                :integer          default("image"), not null
+#  file_meta           :json
+#  account_id          :bigint(8)
+#  description         :text
+#  scheduled_status_id :bigint(8)
 #
 
 class MediaAttachment < ApplicationRecord
@@ -24,11 +25,11 @@ class MediaAttachment < ApplicationRecord
 
   enum type: [:image, :gifv, :video, :audio, :unknown]
 
-  IMAGE_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif'].freeze
+  IMAGE_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].freeze
   VIDEO_FILE_EXTENSIONS = ['.webm', '.mp4', '.m4v', '.mov'].freeze
   AUDIO_FILE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.ogg'].freeze
 
-  IMAGE_MIME_TYPES             = ['image/jpeg', 'image/png', 'image/gif'].freeze
+  IMAGE_MIME_TYPES             = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].freeze
   VIDEO_MIME_TYPES             = ['video/webm', 'video/mp4', 'video/quicktime'].freeze
   VIDEO_CONVERTIBLE_MIME_TYPES = ['video/webm', 'video/quicktime'].freeze
   AUDIO_MIME_TYPES             = ['audio/mpeg', 'audio/mp4', 'audio/vnd.wav', 'audio/wav', 'audio/x-wav', 'audio/x-wave', 'audio/ogg',].freeze
@@ -77,6 +78,7 @@ class MediaAttachment < ApplicationRecord
     format: 'mp4',
     convert_options: {
       output: {
+        'loglevel' => 'fatal',
         'movflags' => 'faststart',
         'pix_fmt'  => 'yuv420p',
         'vf'       => 'scale=\'trunc(iw/2)*2:trunc(ih/2)*2\'',
@@ -93,8 +95,9 @@ class MediaAttachment < ApplicationRecord
   IMAGE_LIMIT = 8.megabytes
   VIDEO_LIMIT = 40.megabytes
 
-  belongs_to :account, inverse_of: :media_attachments, optional: true
-  belongs_to :status,  inverse_of: :media_attachments, optional: true
+  belongs_to :account,          inverse_of: :media_attachments, optional: true
+  belongs_to :status,           inverse_of: :media_attachments, optional: true
+  belongs_to :scheduled_status, inverse_of: :media_attachments, optional: true
 
   has_attached_file :file,
                     styles: ->(f) { file_styles f },
@@ -102,8 +105,8 @@ class MediaAttachment < ApplicationRecord
                     convert_options: { all: '-quality 90 -strip' }
 
   validates_attachment_content_type :file, content_type: IMAGE_MIME_TYPES + VIDEO_MIME_TYPES + AUDIO_MIME_TYPES
-  validates_attachment_size :file, less_than: IMAGE_LIMIT, unless: :video?
-  validates_attachment_size :file, less_than: VIDEO_LIMIT, if: :video?
+  validates_attachment_size :file, less_than: IMAGE_LIMIT, unless: :video_or_gifv?
+  validates_attachment_size :file, less_than: VIDEO_LIMIT, if: :video_or_gifv?
   remotable_attachment :file, VIDEO_LIMIT
 
   include Attachmentable
@@ -111,8 +114,8 @@ class MediaAttachment < ApplicationRecord
   validates :account, presence: true
   validates :description, length: { maximum: 420 }, if: :local?
 
-  scope :attached,   -> { where.not(status_id: nil) }
-  scope :unattached, -> { where(status_id: nil) }
+  scope :attached,   -> { where.not(status_id: nil).or(where.not(scheduled_status_id: nil)) }
+  scope :unattached, -> { where(status_id: nil, scheduled_status_id: nil) }
   scope :local,      -> { where(remote_url: '') }
   scope :remote,     -> { where.not(remote_url: '') }
 
@@ -124,6 +127,10 @@ class MediaAttachment < ApplicationRecord
 
   def needs_redownload?
     file.blank? && remote_url.present?
+  end
+
+  def video_or_gifv?
+    video? || gifv?
   end
 
   def to_param
@@ -148,6 +155,7 @@ class MediaAttachment < ApplicationRecord
     "#{x},#{y}"
   end
 
+  after_commit :reset_parent_cache, on: :update
   before_create :prepare_description, unless: :local?
   before_create :set_shortcode
   before_post_process :set_type_and_extension
@@ -251,5 +259,10 @@ class MediaAttachment < ApplicationRecord
       duration: movie.duration,
       bitrate: movie.bitrate,
     }
+  end
+
+  def reset_parent_cache
+    return if status_id.nil?
+    Rails.cache.delete("statuses/#{status_id}")
   end
 end

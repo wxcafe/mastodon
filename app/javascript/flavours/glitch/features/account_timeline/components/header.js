@@ -3,7 +3,6 @@ import ImmutablePropTypes from 'react-immutable-proptypes';
 import PropTypes from 'prop-types';
 import InnerHeader from 'flavours/glitch/features/account/components/header';
 import ActionBar from 'flavours/glitch/features/account/components/action_bar';
-import MissingIndicator from 'flavours/glitch/components/missing_indicator';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { FormattedMessage } from 'react-intl';
 import { NavLink } from 'react-router-dom';
@@ -13,6 +12,7 @@ export default class Header extends ImmutablePureComponent {
 
   static propTypes = {
     account: ImmutablePropTypes.map,
+    identity_proofs: ImmutablePropTypes.list,
     onFollow: PropTypes.func.isRequired,
     onBlock: PropTypes.func.isRequired,
     onMention: PropTypes.func.isRequired,
@@ -23,7 +23,9 @@ export default class Header extends ImmutablePureComponent {
     onBlockDomain: PropTypes.func.isRequired,
     onUnblockDomain: PropTypes.func.isRequired,
     onEndorseToggle: PropTypes.func.isRequired,
+    onAddToList: PropTypes.func.isRequired,
     hideTabs: PropTypes.bool,
+    domain: PropTypes.string.isRequired,
   };
 
   static contextTypes = {
@@ -78,11 +80,15 @@ export default class Header extends ImmutablePureComponent {
     this.props.onEndorseToggle(this.props.account);
   }
 
+  handleAddToList = () => {
+    this.props.onAddToList(this.props.account);
+  }
+
   render () {
-    const { account, hideTabs } = this.props;
+    const { account, hideTabs, identity_proofs } = this.props;
 
     if (account === null) {
-      return <MissingIndicator />;
+      return null;
     }
 
     return (
@@ -91,12 +97,8 @@ export default class Header extends ImmutablePureComponent {
 
         <InnerHeader
           account={account}
+          identity_proofs={identity_proofs}
           onFollow={this.handleFollow}
-          onBlock={this.handleBlock}
-        />
-
-        <ActionBar
-          account={account}
           onBlock={this.handleBlock}
           onMention={this.handleMention}
           onDirect={this.handleDirect}
@@ -106,6 +108,12 @@ export default class Header extends ImmutablePureComponent {
           onBlockDomain={this.handleBlockDomain}
           onUnblockDomain={this.handleUnblockDomain}
           onEndorseToggle={this.handleEndorseToggle}
+          onAddToList={this.handleAddToList}
+          domain={this.props.domain}
+        />
+
+        <ActionBar
+          account={account}
         />
 
         {!hideTabs && (

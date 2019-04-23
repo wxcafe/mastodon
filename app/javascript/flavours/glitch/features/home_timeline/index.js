@@ -16,7 +16,7 @@ const messages = defineMessages({
 
 const mapStateToProps = state => ({
   hasUnread: state.getIn(['timelines', 'home', 'unread']) > 0,
-  isPartial: state.getIn(['timelines', 'home', 'items', 0], null) === null,
+  isPartial: state.getIn(['timelines', 'home', 'isPartial']),
 });
 
 @connect(mapStateToProps)
@@ -97,7 +97,7 @@ export default class HomeTimeline extends React.PureComponent {
     const pinned = !!columnId;
 
     return (
-      <Column ref={this.setRef} name='home'>
+      <Column ref={this.setRef} name='home' label={intl.formatMessage(messages.title)}>
         <ColumnHeader
           icon='home'
           active={hasUnread}

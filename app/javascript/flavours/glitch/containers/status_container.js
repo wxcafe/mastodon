@@ -22,8 +22,10 @@ import { muteStatus, unmuteStatus, deleteStatus } from 'flavours/glitch/actions/
 import { initMuteModal } from 'flavours/glitch/actions/mutes';
 import { initReport } from 'flavours/glitch/actions/reports';
 import { openModal } from 'flavours/glitch/actions/modal';
+import { changeLocalSetting } from 'flavours/glitch/actions/local_settings';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 import { boostModal, favouriteModal, deleteModal } from 'flavours/glitch/util/initial_state';
+import { showAlertForError } from '../actions/alerts';
 
 const messages = defineMessages({
   deleteConfirm: { id: 'confirmations.delete.confirm', defaultMessage: 'Delete' },
@@ -31,6 +33,9 @@ const messages = defineMessages({
   redraftConfirm: { id: 'confirmations.redraft.confirm', defaultMessage: 'Delete & redraft' },
   redraftMessage: { id: 'confirmations.redraft.message', defaultMessage: 'Are you sure you want to delete this status and re-draft it? You will lose all replies, boosts and favourites to it.' },
   blockConfirm: { id: 'confirmations.block.confirm', defaultMessage: 'Block' },
+  replyConfirm: { id: 'confirmations.reply.confirm', defaultMessage: 'Reply' },
+  replyMessage: { id: 'confirmations.reply.message', defaultMessage: 'Replying now will overwrite the message you are currently composing. Are you sure you want to proceed?' },
+  blockAndReport: { id: 'confirmations.block.block_and_report', defaultMessage: 'Block & Report' },
 });
 
 const makeMapStateToProps = () => {
@@ -67,7 +72,19 @@ const makeMapStateToProps = () => {
 const mapDispatchToProps = (dispatch, { intl }) => ({
 
   onReply (status, router) {
-    dispatch(replyCompose(status, router));
+    dispatch((_, getState) => {
+      let state = getState();
+      if (state.getIn(['local_settings', 'confirm_before_clearing_draft']) && state.getIn(['compose', 'text']).trim().length !== 0) {
+        dispatch(openModal('CONFIRM', {
+          message: intl.formatMessage(messages.replyMessage),
+          confirm: intl.formatMessage(messages.replyConfirm),
+          onDoNotAsk: () => dispatch(changeLocalSetting(['confirm_before_clearing_draft'], false)),
+          onConfirm: () => dispatch(replyCompose(status, router)),
+        }));
+      } else {
+        dispatch(replyCompose(status, router));
+      }
+    });
   },
 
   onModalReblog (status) {
@@ -119,17 +136,20 @@ const mapDispatchToProps = (dispatch, { intl }) => ({
   },
 
   onEmbed (status) {
-    dispatch(openModal('EMBED', { url: status.get('url') }));
+    dispatch(openModal('EMBED', {
+      url: status.get('url'),
+      onError: error => dispatch(showAlertForError(error)),
+    }));
   },
 
-  onDelete (status, withRedraft = false) {
+  onDelete (status, history, withRedraft = false) {
     if (!deleteModal) {
-      dispatch(deleteStatus(status.get('id'), withRedraft));
+      dispatch(deleteStatus(status.get('id'), history, withRedraft));
     } else {
       dispatch(openModal('CONFIRM', {
         message: intl.formatMessage(withRedraft ? messages.redraftMessage : messages.deleteMessage),
         confirm: intl.formatMessage(withRedraft ? messages.redraftConfirm : messages.deleteConfirm),
-        onConfirm: () => dispatch(deleteStatus(status.get('id'), withRedraft)),
+        onConfirm: () => dispatch(deleteStatus(status.get('id'), history, withRedraft)),
       }));
     }
   },
@@ -150,11 +170,17 @@ const mapDispatchToProps = (dispatch, { intl }) => ({
     dispatch(openModal('VIDEO', { media, time }));
   },
 
-  onBlock (account) {
+  onBlock (status) {
+    const account = status.get('account');
     dispatch(openModal('CONFIRM', {
       message: <FormattedMessage id='confirmations.block.message' defaultMessage='Are you sure you want to block {name}?' values={{ name: <strong>@{account.get('acct')}</strong> }} />,
       confirm: intl.formatMessage(messages.blockConfirm),
       onConfirm: () => dispatch(blockAccount(account.get('id'))),
+      secondary: intl.formatMessage(messages.blockAndReport),
+      onSecondary: () => {
+        dispatch(blockAccount(account.get('id')));
+        dispatch(initReport(account, status));
+      },
     }));
   },
 

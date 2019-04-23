@@ -11,7 +11,7 @@ class REST::AccountSerializer < ActiveModel::Serializer
   has_many :emojis, serializer: REST::CustomEmojiSerializer
 
   class FieldSerializer < ActiveModel::Serializer
-    attributes :name, :value
+    attributes :name, :value, :verified_at
 
     def value
       Formatter.instance.format_field(object.account, object.value)
@@ -50,5 +50,9 @@ class REST::AccountSerializer < ActiveModel::Serializer
 
   def moved_and_not_nested?
     object.moved? && object.moved_to_account.moved_to_account_id.nil?
+  end
+
+  def followers_count
+    (Setting.hide_followers_count || object.user&.setting_hide_followers_count) ? -1 : object.followers_count
   end
 end

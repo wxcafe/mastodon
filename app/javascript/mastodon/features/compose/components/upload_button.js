@@ -7,7 +7,7 @@ import ImmutablePureComponent from 'react-immutable-pure-component';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 
 const messages = defineMessages({
-  upload: { id: 'upload_button.label', defaultMessage: 'Add media' },
+  upload: { id: 'upload_button.label', defaultMessage: 'Add media (JPEG, PNG, GIF, WebM, MP4, MOV)' },
 });
 
 const makeMapStateToProps = () => {
@@ -23,12 +23,13 @@ const iconStyle = {
   lineHeight: '27px',
 };
 
-@connect(makeMapStateToProps)
+export default @connect(makeMapStateToProps)
 @injectIntl
-export default class UploadButton extends ImmutablePureComponent {
+class UploadButton extends ImmutablePureComponent {
 
   static propTypes = {
     disabled: PropTypes.bool,
+    unavailable: PropTypes.bool,
     onSelectFile: PropTypes.func.isRequired,
     style: PropTypes.object,
     resetFileKey: PropTypes.number,
@@ -51,8 +52,11 @@ export default class UploadButton extends ImmutablePureComponent {
   }
 
   render () {
+    const { intl, resetFileKey, unavailable, disabled, acceptContentTypes } = this.props;
 
-    const { intl, resetFileKey, disabled, acceptContentTypes } = this.props;
+    if (unavailable) {
+      return null;
+    }
 
     return (
       <div className='compose-form__upload-button'>
@@ -63,7 +67,7 @@ export default class UploadButton extends ImmutablePureComponent {
             key={resetFileKey}
             ref={this.setRef}
             type='file'
-            multiple={false}
+            multiple
             accept={acceptContentTypes.toArray().join(',')}
             onChange={this.handleChange}
             disabled={disabled}

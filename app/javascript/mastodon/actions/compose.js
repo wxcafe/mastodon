@@ -8,6 +8,8 @@ import resizeImage from '../utils/resize_image';
 import { importFetchedAccounts } from './importer';
 import { updateTimeline } from './timelines';
 import { showAlertForError } from './alerts';
+import { showAlert } from './alerts';
+import { defineMessages } from 'react-intl';
 
 let cancelFetchComposeSuggestionsAccounts;
 
@@ -49,6 +51,18 @@ export const COMPOSE_UPLOAD_CHANGE_REQUEST     = 'COMPOSE_UPLOAD_UPDATE_REQUEST'
 export const COMPOSE_UPLOAD_CHANGE_SUCCESS     = 'COMPOSE_UPLOAD_UPDATE_SUCCESS';
 export const COMPOSE_UPLOAD_CHANGE_FAIL        = 'COMPOSE_UPLOAD_UPDATE_FAIL';
 
+export const COMPOSE_POLL_ADD             = 'COMPOSE_POLL_ADD';
+export const COMPOSE_POLL_REMOVE          = 'COMPOSE_POLL_REMOVE';
+export const COMPOSE_POLL_OPTION_ADD      = 'COMPOSE_POLL_OPTION_ADD';
+export const COMPOSE_POLL_OPTION_CHANGE   = 'COMPOSE_POLL_OPTION_CHANGE';
+export const COMPOSE_POLL_OPTION_REMOVE   = 'COMPOSE_POLL_OPTION_REMOVE';
+export const COMPOSE_POLL_SETTINGS_CHANGE = 'COMPOSE_POLL_SETTINGS_CHANGE';
+
+const messages = defineMessages({
+  uploadErrorLimit: { id: 'upload_error.limit', defaultMessage: 'File upload limit exceeded.' },
+  uploadErrorPoll:  { id: 'upload_error.poll', defaultMessage: 'File upload not allowed with polls.' },
+});
+
 export function changeCompose(text) {
   return {
     type: COMPOSE_CHANGE,
@@ -56,7 +70,7 @@ export function changeCompose(text) {
   };
 };
 
-export function replyCompose(status, router) {
+export function replyCompose(status, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_REPLY,
@@ -64,7 +78,7 @@ export function replyCompose(status, router) {
     });
 
     if (!getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
+      routerHistory.push('/statuses/new');
     }
   };
 };
@@ -81,7 +95,7 @@ export function resetCompose() {
   };
 };
 
-export function mentionCompose(account, router) {
+export function mentionCompose(account, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_MENTION,
@@ -89,12 +103,12 @@ export function mentionCompose(account, router) {
     });
 
     if (!getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
+      routerHistory.push('/statuses/new');
     }
   };
 };
 
-export function directCompose(account, router) {
+export function directCompose(account, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_DIRECT,
@@ -102,12 +116,12 @@ export function directCompose(account, router) {
     });
 
     if (!getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
+      routerHistory.push('/statuses/new');
     }
   };
 };
 
-export function submitCompose() {
+export function submitCompose(routerHistory) {
   return function (dispatch, getState) {
     const status = getState().getIn(['compose', 'text'], '');
     const media  = getState().getIn(['compose', 'media_attachments']);
@@ -125,29 +139,39 @@ export function submitCompose() {
       sensitive: getState().getIn(['compose', 'sensitive']),
       spoiler_text: getState().getIn(['compose', 'spoiler_text'], ''),
       visibility: getState().getIn(['compose', 'privacy']),
+      poll: getState().getIn(['compose', 'poll'], null),
     }, {
       headers: {
         'Idempotency-Key': getState().getIn(['compose', 'idempotencyKey']),
       },
     }).then(function (response) {
-      dispatch(insertIntoTagHistory(response.data.tags));
+      if (response.data.visibility === 'direct' && getState().getIn(['conversations', 'mounted']) <= 0 && routerHistory) {
+        routerHistory.push('/timelines/direct');
+      } else if (routerHistory && routerHistory.location.pathname === '/statuses/new' && window.history.state) {
+        routerHistory.goBack();
+      }
+
+      dispatch(insertIntoTagHistory(response.data.tags, status));
       dispatch(submitComposeSuccess({ ...response.data }));
 
-      // To make the app more responsive, immediately get the status into the columns
+      // To make the app more responsive, immediately push the status
+      // into the columns
 
-      const insertIfOnline = (timelineId) => {
-        if (getState().getIn(['timelines', timelineId, 'items', 0]) !== null) {
+      const insertIfOnline = timelineId => {
+        const timeline = getState().getIn(['timelines', timelineId]);
+
+        if (timeline && timeline.get('items').size > 0 && timeline.getIn(['items', 0]) !== null && timeline.get('online')) {
           dispatch(updateTimeline(timelineId, { ...response.data }));
         }
       };
 
-      insertIfOnline('home');
+      if (response.data.visibility !== 'direct') {
+        insertIfOnline('home');
+      }
 
       if (response.data.in_reply_to_id === null && response.data.visibility === 'public') {
         insertIfOnline('community');
         insertIfOnline('public');
-      } else if (response.data.visibility === 'direct') {
-        insertIfOnline('direct');
       }
     }).catch(function (error) {
       dispatch(submitComposeFail(error));
@@ -177,20 +201,38 @@ export function submitComposeFail(error) {
 
 export function uploadCompose(files) {
   return function (dispatch, getState) {
-    if (getState().getIn(['compose', 'media_attachments']).size > 3) {
+    const uploadLimit = 4;
+    const media  = getState().getIn(['compose', 'media_attachments']);
+    const total = Array.from(files).reduce((a, v) => a + v.size, 0);
+    const progress = new Array(files.length).fill(0);
+
+    if (files.length + media.size > uploadLimit) {
+      dispatch(showAlert(undefined, messages.uploadErrorLimit));
+      return;
+    }
+
+    if (getState().getIn(['compose', 'poll'])) {
+      dispatch(showAlert(undefined, messages.uploadErrorPoll));
       return;
     }
 
     dispatch(uploadComposeRequest());
 
-    resizeImage(files[0]).then(file => {
-      const data = new FormData();
-      data.append('file', file);
+    for (const [i, f] of Array.from(files).entries()) {
+      if (media.size + i > 3) break;
 
-      return api(getState).post('/api/v1/media', data, {
-        onUploadProgress: ({ loaded, total }) => dispatch(uploadComposeProgress(loaded, total)),
-      }).then(({ data }) => dispatch(uploadComposeSuccess(data)));
-    }).catch(error => dispatch(uploadComposeFail(error)));
+      resizeImage(f).then(file => {
+        const data = new FormData();
+        data.append('file', file);
+
+        return api(getState).post('/api/v1/media', data, {
+          onUploadProgress: function({ loaded }){
+            progress[i] = loaded;
+            dispatch(uploadComposeProgress(progress.reduce((a, v) => a + v, 0), total));
+          },
+        }).then(({ data }) => dispatch(uploadComposeSuccess(data)));
+      }).catch(error => dispatch(uploadComposeFail(error)));
+    };
   };
 };
 
@@ -390,13 +432,13 @@ export function hydrateCompose() {
   };
 }
 
-function insertIntoTagHistory(tags) {
+function insertIntoTagHistory(recognizedTags, text) {
   return (dispatch, getState) => {
     const state = getState();
     const oldHistory = state.getIn(['compose', 'tagHistory']);
     const me = state.getIn(['meta', 'me']);
-    const names = tags.map(({ name }) => name);
-    const intersectedOldHistory = oldHistory.filter(name => !names.includes(name));
+    const names = recognizedTags.map(tag => text.match(new RegExp(`#${tag.name}`, 'i'))[0].slice(1));
+    const intersectedOldHistory = oldHistory.filter(name => names.findIndex(newName => newName.toLowerCase() === name.toLowerCase()) === -1);
 
     names.push(...intersectedOldHistory.toJS());
 
@@ -459,4 +501,46 @@ export function changeComposing(value) {
     type: COMPOSE_COMPOSING_CHANGE,
     value,
   };
-}
+};
+
+export function addPoll() {
+  return {
+    type: COMPOSE_POLL_ADD,
+  };
+};
+
+export function removePoll() {
+  return {
+    type: COMPOSE_POLL_REMOVE,
+  };
+};
+
+export function addPollOption(title) {
+  return {
+    type: COMPOSE_POLL_OPTION_ADD,
+    title,
+  };
+};
+
+export function changePollOption(index, title) {
+  return {
+    type: COMPOSE_POLL_OPTION_CHANGE,
+    index,
+    title,
+  };
+};
+
+export function removePollOption(index) {
+  return {
+    type: COMPOSE_POLL_OPTION_REMOVE,
+    index,
+  };
+};
+
+export function changePollSettings(expiresIn, isMultiple) {
+  return {
+    type: COMPOSE_POLL_SETTINGS_CHANGE,
+    expiresIn,
+    isMultiple,
+  };
+};
