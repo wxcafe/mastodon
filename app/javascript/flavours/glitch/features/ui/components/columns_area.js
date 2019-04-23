@@ -1,23 +1,24 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { injectIntl } from 'react-intl';
+import { defineMessages, injectIntl } from 'react-intl';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 
 import ReactSwipeableViews from 'react-swipeable-views';
 import { links, getIndex, getLink } from './tabs_bar';
+import { Link } from 'react-router-dom';
 
 import BundleContainer from '../containers/bundle_container';
 import ColumnLoading from './column_loading';
 import DrawerLoading from './drawer_loading';
 import BundleColumnError from './bundle_column_error';
-import { Drawer, Notifications, HomeTimeline, CommunityTimeline, PublicTimeline, HashtagTimeline, DirectTimeline, FavouritedStatuses, BookmarkedStatuses, ListTimeline } from 'flavours/glitch/util/async-components';
+import { Compose, Notifications, HomeTimeline, CommunityTimeline, PublicTimeline, HashtagTimeline, DirectTimeline, FavouritedStatuses, BookmarkedStatuses, ListTimeline } from 'flavours/glitch/util/async-components';
 
 import detectPassiveEvents from 'detect-passive-events';
 import { scrollRight } from 'flavours/glitch/util/scroll';
 
 const componentMap = {
-  'COMPOSE': Drawer,
+  'COMPOSE': Compose,
   'HOME': HomeTimeline,
   'NOTIFICATIONS': Notifications,
   'PUBLIC': PublicTimeline,
@@ -29,6 +30,12 @@ const componentMap = {
   'LIST': ListTimeline,
 };
 
+const shouldHideFAB = path => path.match(/^\/statuses\/|^\/search|^\/getting-started/);
+
+const messages = defineMessages({
+  publish: { id: 'compose_form.publish', defaultMessage: 'Toot' },
+});
+
 @component => injectIntl(component, { withRef: true })
 export default class ColumnsArea extends ImmutablePureComponent {
 
@@ -39,6 +46,7 @@ export default class ColumnsArea extends ImmutablePureComponent {
   static propTypes = {
     intl: PropTypes.object.isRequired,
     columns: ImmutablePropTypes.list.isRequired,
+    swipeToChangeColumns: PropTypes.bool,
     singleColumn: PropTypes.bool,
     children: PropTypes.node,
   };
@@ -146,28 +154,37 @@ export default class ColumnsArea extends ImmutablePureComponent {
   }
 
   render () {
-    const { columns, children, singleColumn } = this.props;
+    const { columns, children, singleColumn, swipeToChangeColumns, intl } = this.props;
     const { shouldAnimate } = this.state;
 
     const columnIndex = getIndex(this.context.router.history.location.pathname);
     this.pendingIndex = null;
 
     if (singleColumn) {
-      return columnIndex !== -1 ? (
-        <ReactSwipeableViews index={columnIndex} onChangeIndex={this.handleSwipe} onTransitionEnd={this.handleAnimationEnd} animateTransitions={shouldAnimate} springConfig={{ duration: '400ms', delay: '0s', easeFunction: 'ease' }} style={{ height: '100%' }}>
+      const floatingActionButton = shouldHideFAB(this.context.router.history.location.pathname) ? null : <Link key='floating-action-button' to='/statuses/new' className='floating-action-button' aria-label={intl.formatMessage(messages.publish)}><i className='fa fa-pencil' /></Link>;
+
+      return columnIndex !== -1 ? [
+        <ReactSwipeableViews key='content' index={columnIndex} onChangeIndex={this.handleSwipe} onTransitionEnd={this.handleAnimationEnd} animateTransitions={shouldAnimate} springConfig={{ duration: '400ms', delay: '0s', easeFunction: 'ease' }} style={{ height: '100%' }} disabled={!swipeToChangeColumns}>
           {links.map(this.renderView)}
-        </ReactSwipeableViews>
-      ) : <div className='columns-area'>{children}</div>;
+        </ReactSwipeableViews>,
+
+        floatingActionButton,
+      ] : [
+        <div className='columns-area'>{children}</div>,
+
+        floatingActionButton,
+      ];
     }
 
     return (
       <div className='columns-area' ref={this.setRef}>
         {columns.map(column => {
           const params = column.get('params', null) === null ? null : column.get('params').toJS();
+          const other  = params && params.other ? params.other : {};
 
           return (
             <BundleContainer key={column.get('uuid')} fetchComponent={componentMap[column.get('id')]} loading={this.renderLoading(column.get('id'))} error={this.renderError}>
-              {SpecificComponent => <SpecificComponent columnId={column.get('uuid')} params={params} multiColumn />}
+              {SpecificComponent => <SpecificComponent columnId={column.get('uuid')} params={params} multiColumn {...other} />}
             </BundleContainer>
           );
         })}

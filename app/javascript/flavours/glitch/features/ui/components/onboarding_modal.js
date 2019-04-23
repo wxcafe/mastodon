@@ -6,11 +6,13 @@ import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 import ReactSwipeableViews from 'react-swipeable-views';
 import classNames from 'classnames';
 import Permalink from 'flavours/glitch/components/permalink';
-import { WrappedComponent as RawComposer } from 'flavours/glitch/features/composer';
-import DrawerAccount from 'flavours/glitch/features/drawer/account';
-import DrawerSearch from 'flavours/glitch/features/drawer/search';
+import { ComposeForm } from 'flavours/glitch/features/compose/components/compose_form';
+import DrawerAccount from 'flavours/glitch/features/compose/components/navigation_bar';
+import Search from 'flavours/glitch/features/compose/components/search';
 import ColumnHeader from './column_header';
 import { me } from 'flavours/glitch/util/initial_state';
+
+const noop = () => { };
 
 const messages = defineMessages({
   home_title: { id: 'column.home', defaultMessage: 'Home' },
@@ -43,8 +45,7 @@ const PageTwo = ({ intl, myAccount }) => (
     <div className='figure non-interactive'>
       <div className='pseudo-drawer'>
         <DrawerAccount account={myAccount} />
-        <RawComposer
-          intl={intl}
+        <ComposeForm
           privacy='public'
           text='Awoo! #introductions'
         />
@@ -63,7 +64,13 @@ PageTwo.propTypes = {
 const PageThree = ({ intl, myAccount }) => (
   <div className='onboarding-modal__page onboarding-modal__page-three'>
     <div className='figure non-interactive'>
-      <DrawerSearch intl={intl} />
+      <Search
+        value=''
+        onChange={noop}
+        onSubmit={noop}
+        onClear={noop}
+        onShow={noop}
+      />
 
       <div className='pseudo-drawer'>
         <DrawerAccount account={myAccount} />
@@ -133,7 +140,7 @@ const PageSix = ({ admin, domain }) => {
       <h1><FormattedMessage id='onboarding.page_six.almost_done' defaultMessage='Almost done...' /></h1>
       {adminSection}
       <p><FormattedMessage id='onboarding.page_six.github' defaultMessage='{domain} runs on Glitchsoc. Glitchsoc is a friendly {fork} of {Mastodon}. Glitchsoc is fully compatible with all Mastodon apps and instances. Glitchsoc is free open-source software. You can report bugs, request features, or contribute to the code on {github}.' values={{ domain, fork: <a href='https://en.wikipedia.org/wiki/Fork_(software_development)' target='_blank' rel='noopener'>fork</a>, Mastodon: <a href='https://github.com/tootsuite/mastodon' target='_blank' rel='noopener'>Mastodon</a>, github: <a href='https://github.com/glitch-soc/mastodon' target='_blank' rel='noopener'>GitHub</a> }} /></p>
-      <p><FormattedMessage id='onboarding.page_six.apps_available' defaultMessage='There are {apps} available for iOS, Android and other platforms.' values={{ domain, apps: <a href='https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/Apps.md' target='_blank' rel='noopener'><FormattedMessage id='onboarding.page_six.various_app' defaultMessage='mobile apps' /></a> }} /></p>
+      <p><FormattedMessage id='onboarding.page_six.apps_available' defaultMessage='There are {apps} available for iOS, Android and other platforms.' values={{ domain, apps: <a href='https://joinmastodon.org/apps' target='_blank' rel='noopener'><FormattedMessage id='onboarding.page_six.various_app' defaultMessage='mobile apps' /></a> }} /></p>
       <p><em><FormattedMessage id='onboarding.page_six.appetoot' defaultMessage='Bon Appetoot!' /></em></p>
     </div>
   );

@@ -3,6 +3,7 @@ import {
   updateTimeline,
   deleteFromTimelines,
   expandHomeTimeline,
+  connectTimeline,
   disconnectTimeline,
 } from './timelines';
 import { updateNotifications, expandNotifications } from './notifications';
@@ -11,11 +12,16 @@ import { getLocale } from 'mastodon/locales';
 
 const { messages } = getLocale();
 
-export function connectTimelineStream (timelineId, path, pollingRefresh = null) {
+export function connectTimelineStream (timelineId, path, pollingRefresh = null, accept = null) {
 
   return connectStream (path, pollingRefresh, (dispatch, getState) => {
     const locale = getState().getIn(['meta', 'locale']);
+
     return {
+      onConnect() {
+        dispatch(connectTimeline(timelineId));
+      },
+
       onDisconnect() {
         dispatch(disconnectTimeline(timelineId));
       },
@@ -23,7 +29,7 @@ export function connectTimelineStream (timelineId, path, pollingRefresh = null) 
       onReceive (data) {
         switch(data.event) {
         case 'update':
-          dispatch(updateTimeline(timelineId, JSON.parse(data.payload)));
+          dispatch(updateTimeline(timelineId, JSON.parse(data.payload), accept));
           break;
         case 'delete':
           dispatch(deleteFromTimelines(data.payload));
@@ -44,10 +50,9 @@ const refreshHomeTimelineAndNotification = (dispatch, done) => {
   dispatch(expandHomeTimeline({}, () => dispatch(expandNotifications({}, done))));
 };
 
-export const connectUserStream = () => connectTimelineStream('home', 'user', refreshHomeTimelineAndNotification);
-export const connectCommunityStream = () => connectTimelineStream('community', 'public:local');
-export const connectMediaStream = () => connectTimelineStream('community', 'public:local');
-export const connectPublicStream = () => connectTimelineStream('public', 'public');
-export const connectHashtagStream = (tag) => connectTimelineStream(`hashtag:${tag}`, `hashtag&tag=${tag}`);
-export const connectDirectStream = () => connectTimelineStream('direct', 'direct');
-export const connectListStream = (id) => connectTimelineStream(`list:${id}`, `list&list=${id}`);
+export const connectUserStream      = () => connectTimelineStream('home', 'user', refreshHomeTimelineAndNotification);
+export const connectCommunityStream = ({ onlyMedia } = {}) => connectTimelineStream(`community${onlyMedia ? ':media' : ''}`, `public:local${onlyMedia ? ':media' : ''}`);
+export const connectPublicStream    = ({ onlyMedia } = {}) => connectTimelineStream(`public${onlyMedia ? ':media' : ''}`, `public${onlyMedia ? ':media' : ''}`);
+export const connectHashtagStream   = (id, tag, accept) => connectTimelineStream(`hashtag:${id}`, `hashtag&tag=${tag}`, null, accept);
+export const connectDirectStream    = () => connectTimelineStream('direct', 'direct');
+export const connectListStream      = id => connectTimelineStream(`list:${id}`, `list&list=${id}`);

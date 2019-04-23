@@ -32,9 +32,6 @@
 #  suspended               :boolean          default(FALSE), not null
 #  locked                  :boolean          default(FALSE), not null
 #  header_remote_url       :string           default(""), not null
-#  statuses_count          :integer          default(0), not null
-#  followers_count         :integer          default(0), not null
-#  following_count         :integer          default(0), not null
 #  last_webfingered_at     :datetime
 #  inbox_url               :string           default(""), not null
 #  outbox_url              :string           default(""), not null
@@ -46,25 +43,30 @@
 #  featured_collection_url :string
 #  fields                  :jsonb
 #  actor_type              :string
+#  discoverable            :boolean
+#  also_known_as           :string           is an Array
 #
 
 class Account < ApplicationRecord
-  USERNAME_RE = /[a-z0-9_]+([a-z0-9_\.]+[a-z0-9_]+)?/i
+  USERNAME_RE = /[a-z0-9_]+([a-z0-9_\.-]+[a-z0-9_]+)?/i
   MENTION_RE  = /(?<=^|[^\/[:word:]])@((#{USERNAME_RE})(?:@[a-z0-9\.\-]+[a-z0-9]+)?)/i
+  MIN_FOLLOWERS_DISCOVERY = 10
 
+  include AccountAssociations
   include AccountAvatar
   include AccountFinderConcern
   include AccountHeader
   include AccountInteractions
   include Attachmentable
   include Paginable
+  include AccountCounters
+  include DomainNormalizable
 
-  MAX_NOTE_LENGTH = 1000
+  MAX_DISPLAY_NAME_LENGTH = (ENV['MAX_DISPLAY_NAME_CHARS'] || 30).to_i
+  MAX_NOTE_LENGTH = (ENV['MAX_BIO_CHARS'] || 500).to_i
+  MAX_FIELDS = (ENV['MAX_PROFILE_FIELDS'] || 4).to_i
 
   enum protocol: [:ostatus, :activitypub]
-
-  # Local users
-  has_one :user, inverse_of: :account
 
   validates :username, presence: true
 
@@ -76,77 +78,44 @@ class Account < ApplicationRecord
   validates :username, format: { with: /\A[a-z0-9_]+\z/i }, length: { maximum: 30 }, if: -> { local? && will_save_change_to_username? }
   validates_with UniqueUsernameValidator, if: -> { local? && will_save_change_to_username? }
   validates_with UnreservedUsernameValidator, if: -> { local? && will_save_change_to_username? }
-  validates :display_name, length: { maximum: 50 }, if: -> { local? && will_save_change_to_display_name? }
-  validate :note_length_does_not_exceed_length_limit, if: -> { local? && will_save_change_to_note? }
-  validates :fields, length: { maximum: 10 }, if: -> { local? && will_save_change_to_fields? }
-
-  # Timelines
-  has_many :stream_entries, inverse_of: :account, dependent: :destroy
-  has_many :statuses, inverse_of: :account, dependent: :destroy
-  has_many :favourites, inverse_of: :account, dependent: :destroy
-  has_many :bookmarks, inverse_of: :account, dependent: :destroy
-  has_many :mentions, inverse_of: :account, dependent: :destroy
-  has_many :notifications, inverse_of: :account, dependent: :destroy
-
-  # Pinned statuses
-  has_many :status_pins, inverse_of: :account, dependent: :destroy
-  has_many :pinned_statuses, -> { reorder('status_pins.created_at DESC') }, through: :status_pins, class_name: 'Status', source: :status
-
-  # Endorsements
-  has_many :account_pins, inverse_of: :account, dependent: :destroy
-  has_many :endorsed_accounts, through: :account_pins, class_name: 'Account', source: :target_account
-
-  # Media
-  has_many :media_attachments, dependent: :destroy
-
-  # PuSH subscriptions
-  has_many :subscriptions, dependent: :destroy
-
-  # Report relationships
-  has_many :reports
-  has_many :targeted_reports, class_name: 'Report', foreign_key: :target_account_id
-
-  has_many :report_notes, dependent: :destroy
-  has_many :custom_filters, inverse_of: :account, dependent: :destroy
-
-  # Moderation notes
-  has_many :account_moderation_notes, dependent: :destroy
-  has_many :targeted_moderation_notes, class_name: 'AccountModerationNote', foreign_key: :target_account_id, dependent: :destroy
-
-  # Lists
-  has_many :list_accounts, inverse_of: :account, dependent: :destroy
-  has_many :lists, through: :list_accounts
-
-  # Account migrations
-  belongs_to :moved_to_account, class_name: 'Account', optional: true
+  validates :display_name, length: { maximum: MAX_DISPLAY_NAME_LENGTH }, if: -> { local? && will_save_change_to_display_name? }
+  validates :note, note_length: { maximum: MAX_NOTE_LENGTH }, if: -> { local? && will_save_change_to_note? }
+  validates :fields, length: { maximum: MAX_FIELDS }, if: -> { local? && will_save_change_to_fields? }
 
   scope :remote, -> { where.not(domain: nil) }
   scope :local, -> { where(domain: nil) }
-  scope :without_followers, -> { where(followers_count: 0) }
-  scope :with_followers, -> { where('followers_count > 0') }
   scope :expiring, ->(time) { remote.where.not(subscription_expires_at: nil).where('subscription_expires_at < ?', time) }
   scope :partitioned, -> { order(Arel.sql('row_number() over (partition by domain)')) }
   scope :silenced, -> { where(silenced: true) }
   scope :suspended, -> { where(suspended: true) }
   scope :without_suspended, -> { where(suspended: false) }
+  scope :without_silenced, -> { where(silenced: false) }
   scope :recent, -> { reorder(id: :desc) }
+  scope :bots, -> { where(actor_type: %w(Application Service)) }
   scope :alphabetic, -> { order(domain: :asc, username: :asc) }
   scope :by_domain_accounts, -> { group(:domain).select(:domain, 'COUNT(*) AS accounts_count').order('accounts_count desc') }
   scope :matches_username, ->(value) { where(arel_table[:username].matches("#{value}%")) }
   scope :matches_display_name, ->(value) { where(arel_table[:display_name].matches("#{value}%")) }
   scope :matches_domain, ->(value) { where(arel_table[:domain].matches("%#{value}%")) }
-  scope :searchable, -> { where(suspended: false).where(moved_to_account_id: nil) }
+  scope :searchable, -> { without_suspended.where(moved_to_account_id: nil) }
+  scope :discoverable, -> { searchable.without_silenced.where(discoverable: true).joins(:account_stat).where(AccountStat.arel_table[:followers_count].gteq(MIN_FOLLOWERS_DISCOVERY)) }
+  scope :tagged_with, ->(tag) { joins(:accounts_tags).where(accounts_tags: { tag_id: tag }) }
+  scope :by_recent_status, -> { order(Arel.sql('(case when account_stats.last_status_at is null then 1 else 0 end) asc, account_stats.last_status_at desc')) }
+  scope :popular, -> { order('account_stats.followers_count desc') }
 
   delegate :email,
            :unconfirmed_email,
            :current_sign_in_ip,
            :current_sign_in_at,
            :confirmed?,
+           :approved?,
+           :pending?,
            :admin?,
            :moderator?,
            :staff?,
            :locale,
            :hides_network?,
+           :shows_application?,
            to: :user,
            prefix: true,
            allow_nil: true
@@ -179,6 +148,10 @@ class Account < ApplicationRecord
     "#{username}@#{Rails.configuration.x.local_domain}"
   end
 
+  def local_followers_count
+    Follow.where(target_account_id: id).count
+  end
+
   def to_webfinger_s
     "acct:#{local_username_and_domain}"
   end
@@ -194,6 +167,14 @@ class Account < ApplicationRecord
   def refresh!
     return if local?
     ResolveAccountService.new.call(acct)
+  end
+
+  def silence!
+    update!(silenced: true)
+  end
+
+  def unsilence!
+    update!(silenced: false)
   end
 
   def suspend!
@@ -221,16 +202,63 @@ class Account < ApplicationRecord
     @keypair ||= OpenSSL::PKey::RSA.new(private_key || public_key)
   end
 
+  def tags_as_strings=(tag_names)
+    tag_names.map! { |name| name.mb_chars.downcase.to_s }
+    tag_names.uniq!
+
+    # Existing hashtags
+    hashtags_map = Tag.where(name: tag_names).each_with_object({}) { |tag, h| h[tag.name] = tag }
+
+    # Initialize not yet existing hashtags
+    tag_names.each do |name|
+      next if hashtags_map.key?(name)
+      hashtags_map[name] = Tag.new(name: name)
+    end
+
+    # Remove hashtags that are to be deleted
+    tags.each do |tag|
+      if hashtags_map.key?(tag.name)
+        hashtags_map.delete(tag.name)
+      else
+        transaction do
+          tags.delete(tag)
+          tag.decrement_count!(:accounts_count)
+        end
+      end
+    end
+
+    # Add hashtags that were so far missing
+    hashtags_map.each_value do |tag|
+      transaction do
+        tags << tag
+        tag.increment_count!(:accounts_count)
+      end
+    end
+  end
+
+  def also_known_as
+    self[:also_known_as] || []
+  end
+
   def fields
     (self[:fields] || []).map { |f| Field.new(self, f) }
   end
 
   def fields_attributes=(attributes)
-    fields = []
+    fields     = []
+    old_fields = self[:fields] || []
+    old_fields = [] if old_fields.is_a?(Hash)
 
     if attributes.is_a?(Hash)
       attributes.each_value do |attr|
         next if attr[:name].blank?
+
+        previous = old_fields.find { |item| item['value'] == attr[:value] }
+
+        if previous && previous['verified_at'].present?
+          attr[:verified_at] = previous['verified_at']
+        end
+
         fields << attr
       end
     end
@@ -239,12 +267,16 @@ class Account < ApplicationRecord
   end
 
   def build_fields
-    return if fields.size >= 4
+    return if fields.size >= MAX_FIELDS
 
-    raw_fields = self[:fields] || []
-    add_fields = 4 - raw_fields.size
-    add_fields.times { raw_fields << { name: '', value: '' } }
-    self.fields = raw_fields
+    tmp = self[:fields] || []
+    tmp = [] if tmp.is_a?(Hash)
+
+    (MAX_FIELDS - tmp.size).times do
+      tmp << { name: '', value: '' }
+    end
+
+    self.fields = tmp
   end
 
   def magic_key
@@ -297,17 +329,52 @@ class Account < ApplicationRecord
   end
 
   class Field < ActiveModelSerializers::Model
-    attributes :name, :value, :account, :errors
+    attributes :name, :value, :verified_at, :account, :errors
 
-    def initialize(account, attr)
-      @account = account
-      @name    = attr['name'].strip[0, 255]
-      @value   = attr['value'].strip[0, 255]
-      @errors  = {}
+    def initialize(account, attributes)
+      @account     = account
+      @attributes  = attributes
+      @name        = attributes['name'].strip[0, string_limit]
+      @value       = attributes['value'].strip[0, string_limit]
+      @verified_at = attributes['verified_at']&.to_datetime
+      @errors      = {}
+    end
+
+    def verified?
+      verified_at.present?
+    end
+
+    def value_for_verification
+      @value_for_verification ||= begin
+        if account.local?
+          value
+        else
+          ActionController::Base.helpers.strip_tags(value)
+        end
+      end
+    end
+
+    def verifiable?
+      value_for_verification.present? && value_for_verification.start_with?('http://', 'https://')
+    end
+
+    def mark_verified!
+      @verified_at = Time.now.utc
+      @attributes['verified_at'] = @verified_at
     end
 
     def to_h
-      { name: @name, value: @value }
+      { name: @name, value: @value, verified_at: @verified_at }
+    end
+
+    private
+
+    def string_limit
+      if account.local?
+        255
+      else
+        2047
+      end
     end
   end
 
@@ -325,7 +392,7 @@ class Account < ApplicationRecord
       DeliveryFailureTracker.filter(urls)
     end
 
-    def search_for(terms, limit = 10)
+    def search_for(terms, limit = 10, offset = 0)
       textsearch, query = generate_query_for_search(terms)
 
       sql = <<-SQL.squish
@@ -337,13 +404,15 @@ class Account < ApplicationRecord
           AND accounts.suspended = false
           AND accounts.moved_to_account_id IS NULL
         ORDER BY rank DESC
-        LIMIT ?
+        LIMIT ? OFFSET ?
       SQL
 
-      find_by_sql([sql, limit])
+      records = find_by_sql([sql, limit, offset])
+      ActiveRecord::Associations::Preloader.new.preload(records, :account_stat)
+      records
     end
 
-    def advanced_search_for(terms, account, limit = 10, following = false)
+    def advanced_search_for(terms, account, limit = 10, following = false, offset = 0)
       textsearch, query = generate_query_for_search(terms)
 
       if following
@@ -364,10 +433,10 @@ class Account < ApplicationRecord
             AND accounts.moved_to_account_id IS NULL
           GROUP BY accounts.id
           ORDER BY rank DESC
-          LIMIT ?
+          LIMIT ? OFFSET ?
         SQL
 
-        find_by_sql([sql, account.id, account.id, account.id, limit])
+        records = find_by_sql([sql, account.id, account.id, account.id, limit, offset])
       else
         sql = <<-SQL.squish
           SELECT
@@ -380,11 +449,14 @@ class Account < ApplicationRecord
             AND accounts.moved_to_account_id IS NULL
           GROUP BY accounts.id
           ORDER BY rank DESC
-          LIMIT ?
+          LIMIT ? OFFSET ?
         SQL
 
-        find_by_sql([sql, account.id, account.id, limit])
+        records = find_by_sql([sql, account.id, account.id, limit, offset])
       end
+
+      ActiveRecord::Associations::Preloader.new.preload(records, :account_stat)
+      records
     end
 
     private
@@ -403,14 +475,19 @@ class Account < ApplicationRecord
   end
 
   before_create :generate_keys
-  before_validation :normalize_domain
   before_validation :prepare_contents, if: :local?
+  before_validation :prepare_username, on: :create
+  before_destroy :clean_feed_manager
 
   private
 
   def prepare_contents
     display_name&.strip!
     note&.strip!
+  end
+
+  def prepare_username
+    username&.squish!
   end
 
   def generate_keys
@@ -421,29 +498,28 @@ class Account < ApplicationRecord
     self.public_key  = keypair.public_key.to_pem
   end
 
-  YAML_START = "---\r\n"
-  YAML_END = "\r\n...\r\n"
-
-  def note_length_does_not_exceed_length_limit
-    note_without_metadata = note
-    if note.start_with? YAML_START
-      idx = note.index YAML_END
-      unless idx.nil?
-        note_without_metadata = note[(idx + YAML_END.length) .. -1]
-      end
-    end
-    if note_without_metadata.mb_chars.grapheme_length > MAX_NOTE_LENGTH
-      errors.add(:note, "can't be longer than 500 graphemes")
-    end
-  end
-
   def normalize_domain
     return if local?
 
-    self.domain = TagManager.instance.normalize_domain(domain)
+    super
   end
 
   def emojifiable_text
     [note, display_name, fields.map(&:value)].join(' ')
+  end
+
+  def clean_feed_manager
+    reblog_key       = FeedManager.instance.key(:home, id, 'reblogs')
+    reblogged_id_set = Redis.current.zrange(reblog_key, 0, -1)
+
+    Redis.current.pipelined do
+      Redis.current.del(FeedManager.instance.key(:home, id))
+      Redis.current.del(reblog_key)
+
+      reblogged_id_set.each do |reblogged_id|
+        reblog_set_key = FeedManager.instance.key(:home, id, "reblogs:#{reblogged_id}")
+        Redis.current.del(reblog_set_key)
+      end
+    end
   end
 end

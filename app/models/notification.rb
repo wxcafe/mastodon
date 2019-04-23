@@ -22,9 +22,10 @@ class Notification < ApplicationRecord
     follow:         'Follow',
     follow_request: 'FollowRequest',
     favourite:      'Favourite',
+    poll:           'Poll',
   }.freeze
 
-  STATUS_INCLUDES = [:account, :application, :stream_entry, :media_attachments, :tags, mentions: :account, reblog: [:stream_entry, :account, :application, :media_attachments, :tags, mentions: :account]].freeze
+  STATUS_INCLUDES = [:account, :application, :preloadable_poll, :media_attachments, :tags, active_mentions: :account, reblog: [:account, :application, :preloadable_poll, :media_attachments, :tags, active_mentions: :account]].freeze
 
   belongs_to :account, optional: true
   belongs_to :from_account, class_name: 'Account', optional: true
@@ -35,6 +36,7 @@ class Notification < ApplicationRecord
   belongs_to :follow,         foreign_type: 'Follow',        foreign_key: 'activity_id', optional: true
   belongs_to :follow_request, foreign_type: 'FollowRequest', foreign_key: 'activity_id', optional: true
   belongs_to :favourite,      foreign_type: 'Favourite',     foreign_key: 'activity_id', optional: true
+  belongs_to :poll,           foreign_type: 'Poll',          foreign_key: 'activity_id', optional: true
 
   validates :account_id, uniqueness: { scope: [:activity_type, :activity_id] }
   validates :activity_type, inclusion: { in: TYPE_CLASS_MAP.values }
@@ -44,7 +46,7 @@ class Notification < ApplicationRecord
     where(activity_type: types)
   }
 
-  cache_associated :from_account, status: STATUS_INCLUDES, mention: [status: STATUS_INCLUDES], favourite: [:account, status: STATUS_INCLUDES], follow: :account
+  cache_associated :from_account, status: STATUS_INCLUDES, mention: [status: STATUS_INCLUDES], favourite: [:account, status: STATUS_INCLUDES], follow: :account, poll: [status: STATUS_INCLUDES]
 
   def type
     @type ||= TYPE_CLASS_MAP.invert[activity_type].to_sym
@@ -58,6 +60,8 @@ class Notification < ApplicationRecord
       favourite&.status
     when :mention
       mention&.status
+    when :poll
+      poll&.status
     end
   end
 
@@ -75,7 +79,7 @@ class Notification < ApplicationRecord
 
       return if account_ids.empty?
 
-      accounts = Account.where(id: account_ids).map { |a| [a.id, a] }.to_h
+      accounts = Account.where(id: account_ids).includes(:account_stat).each_with_object({}) { |a, h| h[a.id] = a }
 
       cached_items.each do |item|
         item.from_account = accounts[item.from_account_id]
@@ -97,7 +101,7 @@ class Notification < ApplicationRecord
     return unless new_record?
 
     case activity_type
-    when 'Status', 'Follow', 'Favourite', 'FollowRequest'
+    when 'Status', 'Follow', 'Favourite', 'FollowRequest', 'Poll'
       self.from_account_id = activity&.account_id
     when 'Mention'
       self.from_account_id = activity&.status&.account_id

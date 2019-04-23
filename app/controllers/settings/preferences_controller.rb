@@ -37,12 +37,16 @@ class Settings::PreferencesController < Settings::BaseController
       :setting_favourite_modal,
       :setting_delete_modal,
       :setting_auto_play_gif,
-      :setting_display_sensitive_media,
+      :setting_display_media,
+      :setting_expand_spoilers,
       :setting_reduce_motion,
       :setting_system_font_ui,
       :setting_noindex,
       :setting_hide_network,
-      notification_emails: %i(follow follow_request reblog favourite mention digest),
+      :setting_hide_followers_count,
+      :setting_aggregate_reblogs,
+      :setting_show_application,
+      notification_emails: %i(follow follow_request reblog favourite mention digest report pending_account),
       interactions: %i(must_be_follower must_be_following)
     )
   end

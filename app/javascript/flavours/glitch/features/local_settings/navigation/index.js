@@ -5,11 +5,14 @@ import { injectIntl, defineMessages } from 'react-intl';
 
 //  Our imports
 import LocalSettingsNavigationItem from './item';
+import { preferencesLink } from 'flavours/glitch/util/backend_links';
 
 //  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 const messages = defineMessages({
   general: {  id: 'settings.general', defaultMessage: 'General' },
+  compose: {  id: 'settings.compose_box_opts', defaultMessage: 'Compose box' },
+  content_warnings: { id: 'settings.content_warnings', defaultMessage: 'Content Warnings' },
   collapsed: { id: 'settings.collapsed_statuses', defaultMessage: 'Collapsed toots' },
   media: { id: 'settings.media', defaultMessage: 'Media' },
   preferences: { id: 'settings.preferences', defaultMessage: 'Preferences' },
@@ -36,32 +39,50 @@ export default class LocalSettingsNavigation extends React.PureComponent {
           active={index === 0}
           index={0}
           onNavigate={onNavigate}
+          icon='cogs'
           title={intl.formatMessage(messages.general)}
         />
         <LocalSettingsNavigationItem
           active={index === 1}
           index={1}
           onNavigate={onNavigate}
-          title={intl.formatMessage(messages.collapsed)}
+          icon='pencil'
+          title={intl.formatMessage(messages.compose)}
         />
         <LocalSettingsNavigationItem
           active={index === 2}
           index={2}
           onNavigate={onNavigate}
-          title={intl.formatMessage(messages.media)}
+          textIcon='CW'
+          title={intl.formatMessage(messages.content_warnings)}
         />
         <LocalSettingsNavigationItem
           active={index === 3}
-          href='/settings/preferences'
           index={3}
-          icon='cog'
-          title={intl.formatMessage(messages.preferences)}
+          onNavigate={onNavigate}
+          icon='angle-double-up'
+          title={intl.formatMessage(messages.collapsed)}
         />
         <LocalSettingsNavigationItem
           active={index === 4}
-          className='close'
           index={4}
+          onNavigate={onNavigate}
+          icon='image'
+          title={intl.formatMessage(messages.media)}
+        />
+        <LocalSettingsNavigationItem
+          active={index === 5}
+          href={ preferencesLink }
+          index={5}
+          icon='sliders'
+          title={intl.formatMessage(messages.preferences)}
+        />
+        <LocalSettingsNavigationItem
+          active={index === 6}
+          className='close'
+          index={6}
           onNavigate={onClose}
+          icon='times'
           title={intl.formatMessage(messages.close)}
         />
       </nav>

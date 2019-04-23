@@ -10,15 +10,16 @@ import { isMobile } from 'flavours/glitch/util/is_mobile';
 import { debounce } from 'lodash';
 import { uploadCompose, resetCompose } from 'flavours/glitch/actions/compose';
 import { expandHomeTimeline } from 'flavours/glitch/actions/timelines';
-import { expandNotifications } from 'flavours/glitch/actions/notifications';
+import { expandNotifications, notificationsSetVisibility } from 'flavours/glitch/actions/notifications';
 import { fetchFilters } from 'flavours/glitch/actions/filters';
 import { clearHeight } from 'flavours/glitch/actions/height_cache';
 import { WrappedSwitch, WrappedRoute } from 'flavours/glitch/util/react_router_helpers';
 import UploadArea from './components/upload_area';
 import ColumnsAreaContainer from './containers/columns_area_container';
 import classNames from 'classnames';
+import Favico from 'favico.js';
 import {
-  Drawer,
+  Compose,
   Status,
   GettingStarted,
   KeyboardShortcuts,
@@ -59,11 +60,14 @@ const messages = defineMessages({
 });
 
 const mapStateToProps = state => ({
-  hasComposingText: state.getIn(['compose', 'text']) !== '',
+  hasComposingText: state.getIn(['compose', 'text']).trim().length !== 0,
+  hasMediaAttachments: state.getIn(['compose', 'media_attachments']).size > 0,
   layout: state.getIn(['local_settings', 'layout']),
   isWide: state.getIn(['local_settings', 'stretch']),
   navbarUnder: state.getIn(['local_settings', 'navbar_under']),
   dropdownMenuIsOpen: state.getIn(['dropdown_menu', 'openId']) !== null,
+  unreadNotifications: state.getIn(['notifications', 'unread']),
+  showFaviconBadge: state.getIn(['local_settings', 'notifications', 'favicon_badge']),
 });
 
 const keyMap = {
@@ -110,11 +114,14 @@ export default class UI extends React.Component {
     navbarUnder: PropTypes.bool,
     isComposing: PropTypes.bool,
     hasComposingText: PropTypes.bool,
+    hasMediaAttachments: PropTypes.bool,
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
     history: PropTypes.object.isRequired,
     intl: PropTypes.object.isRequired,
     dropdownMenuIsOpen: PropTypes.bool,
+    unreadNotifications: PropTypes.number,
+    showFaviconBadge: PropTypes.bool,
   };
 
   state = {
@@ -123,9 +130,9 @@ export default class UI extends React.Component {
   };
 
   handleBeforeUnload = (e) => {
-    const { intl, hasComposingText } = this.props;
+    const { intl, hasComposingText, hasMediaAttachments } = this.props;
 
-    if (hasComposingText) {
+    if (hasComposingText || hasMediaAttachments) {
       // Setting returnValue to any string causes confirmation dialog.
       // Many browsers no longer display this text to users,
       // but we set user-friendly message for other browsers, e.g. Edge.
@@ -159,6 +166,7 @@ export default class UI extends React.Component {
   }
 
   handleDragOver = (e) => {
+    if (this.dataTransferIsText(e.dataTransfer)) return false;
     e.preventDefault();
     e.stopPropagation();
 
@@ -172,11 +180,13 @@ export default class UI extends React.Component {
   }
 
   handleDrop = (e) => {
+    if (this.dataTransferIsText(e.dataTransfer)) return;
     e.preventDefault();
 
     this.setState({ draggingOver: false });
+    this.dragTargets = [];
 
-    if (e.dataTransfer && e.dataTransfer.files.length === 1) {
+    if (e.dataTransfer && e.dataTransfer.files.length >= 1) {
       this.props.dispatch(uploadCompose(e.dataTransfer.files));
     }
   }
@@ -194,6 +204,10 @@ export default class UI extends React.Component {
     this.setState({ draggingOver: false });
   }
 
+  dataTransferIsText = (dataTransfer) => {
+    return (dataTransfer && Array.from(dataTransfer.types).includes('text/plain') && dataTransfer.items.length === 1);
+  }
+
   closeUploadModal = () => {
     this.setState({ draggingOver: false });
   }
@@ -206,7 +220,27 @@ export default class UI extends React.Component {
     }
   }
 
+  handleVisibilityChange = () => {
+    const visibility = !document[this.visibilityHiddenProp];
+    this.props.dispatch(notificationsSetVisibility(visibility));
+  }
+
   componentWillMount () {
+    if (typeof document.hidden !== 'undefined') { // Opera 12.10 and Firefox 18 and later support
+      this.visibilityHiddenProp = 'hidden';
+      this.visibilityChange = 'visibilitychange';
+    } else if (typeof document.msHidden !== 'undefined') {
+      this.visibilityHiddenProp = 'msHidden';
+      this.visibilityChange = 'msvisibilitychange';
+    } else if (typeof document.webkitHidden !== 'undefined') {
+      this.visibilityHiddenProp = 'webkitHidden';
+      this.visibilityChange = 'webkitvisibilitychange';
+    }
+    if (this.visibilityChange !== undefined) {
+      document.addEventListener(this.visibilityChange, this.handleVisibilityChange, false);
+      this.handleVisibilityChange();
+    }
+
     window.addEventListener('beforeunload', this.handleBeforeUnload, false);
     window.addEventListener('resize', this.handleResize, { passive: true });
     document.addEventListener('dragenter', this.handleDragEnter, false);
@@ -218,6 +252,8 @@ export default class UI extends React.Component {
     if ('serviceWorker' in  navigator) {
       navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerPostMessage);
     }
+
+    this.favicon = new Favico({ animation:"none" });
 
     this.props.dispatch(expandHomeTimeline());
     this.props.dispatch(expandNotifications());
@@ -247,9 +283,19 @@ export default class UI extends React.Component {
     if (![this.props.location.pathname, '/'].includes(prevProps.location.pathname)) {
       this.columnsAreaNode.handleChildrenContentChange();
     }
+    if (this.props.unreadNotifications != prevProps.unreadNotifications ||
+        this.props.showFaviconBadge != prevProps.showFaviconBadge) {
+      if (this.favicon) {
+        this.favicon.badge(this.props.showFaviconBadge ? this.props.unreadNotifications : 0);
+      }
+    }
   }
 
   componentWillUnmount () {
+    if (this.visibilityChange !== undefined) {
+      document.removeEventListener(this.visibilityChange, this.handleVisibilityChange);
+    }
+
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     window.removeEventListener('resize', this.handleResize);
     document.removeEventListener('dragenter', this.handleDragEnter);
@@ -264,7 +310,7 @@ export default class UI extends React.Component {
   }
 
   setColumnsAreaRef = c => {
-    this.columnsAreaNode = c.getWrappedInstance().getWrappedInstance();
+    this.columnsAreaNode = c.getWrappedInstance();
   }
 
   handleHotkeyNew = e => {
@@ -295,11 +341,16 @@ export default class UI extends React.Component {
   handleHotkeyFocusColumn = e => {
     const index  = (e.key * 1) + 1; // First child is drawer, skip that
     const column = this.node.querySelector(`.column:nth-child(${index})`);
+    if (!column) return;
+    const container = column.querySelector('.scrollable');
 
-    if (column) {
-      const status = column.querySelector('.focusable');
+    if (container) {
+      const status = container.querySelector('.focusable');
 
       if (status) {
+        if (container.scrollTop > status.offsetTop) {
+          status.scrollIntoView(true);
+        }
         status.focus();
       }
     }
@@ -417,7 +468,7 @@ export default class UI extends React.Component {
     };
 
     return (
-      <HotKeys keyMap={keyMap} handlers={handlers} ref={this.setHotkeysRef}>
+      <HotKeys keyMap={keyMap} handlers={handlers} ref={this.setHotkeysRef} attach={window} focused>
         <div className={className} ref={this.setRef} style={{ pointerEvents: dropdownMenuIsOpen ? 'none' : null }}>
           {navbarUnder ? null : (<TabsBar />)}
 
@@ -428,7 +479,7 @@ export default class UI extends React.Component {
               <WrappedRoute path='/keyboard-shortcuts' component={KeyboardShortcuts} content={children} />
               <WrappedRoute path='/timelines/home' component={HomeTimeline} content={children} />
               <WrappedRoute path='/timelines/public' exact component={PublicTimeline} content={children} />
-              <WrappedRoute path='/timelines/public/local' component={CommunityTimeline} content={children} />
+              <WrappedRoute path='/timelines/public/local' exact component={CommunityTimeline} content={children} />
               <WrappedRoute path='/timelines/direct' component={DirectTimeline} content={children} />
               <WrappedRoute path='/timelines/tag/:id' component={HashtagTimeline} content={children} />
               <WrappedRoute path='/timelines/list/:id' component={ListTimeline} content={children} />
@@ -437,7 +488,9 @@ export default class UI extends React.Component {
               <WrappedRoute path='/bookmarks' component={BookmarkedStatuses} content={children} />
               <WrappedRoute path='/pinned' component={PinnedStatuses} content={children} />
 
-              <WrappedRoute path='/statuses/new' component={Drawer} content={children} />
+              <WrappedRoute path='/search' component={Compose} content={children} componentParams={{ isSearchPage: true }} />
+
+              <WrappedRoute path='/statuses/new' component={Compose} content={children} />
               <WrappedRoute path='/statuses/:statusId' exact component={Status} content={children} />
               <WrappedRoute path='/statuses/:statusId/reblogs' component={Reblogs} content={children} />
               <WrappedRoute path='/statuses/:statusId/favourites' component={Favourites} content={children} />

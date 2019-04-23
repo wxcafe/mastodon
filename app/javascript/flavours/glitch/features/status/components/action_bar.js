@@ -4,7 +4,8 @@ import IconButton from 'flavours/glitch/components/icon_button';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import DropdownMenuContainer from 'flavours/glitch/containers/dropdown_menu_container';
 import { defineMessages, injectIntl } from 'react-intl';
-import { me } from 'flavours/glitch/util/initial_state';
+import { me, isStaff } from 'flavours/glitch/util/initial_state';
+import { accountAdminLink, statusAdminLink } from 'flavours/glitch/util/backend_links';
 
 const messages = defineMessages({
   delete: { id: 'status.delete', defaultMessage: 'Delete' },
@@ -26,6 +27,9 @@ const messages = defineMessages({
   pin: { id: 'status.pin', defaultMessage: 'Pin on profile' },
   unpin: { id: 'status.unpin', defaultMessage: 'Unpin from profile' },
   embed: { id: 'status.embed', defaultMessage: 'Embed' },
+  admin_account: { id: 'status.admin_account', defaultMessage: 'Open moderation interface for @{name}' },
+  admin_status: { id: 'status.admin_status', defaultMessage: 'Open this status in the moderation interface' },
+  copy: { id: 'status.copy', defaultMessage: 'Copy link to status' },
 });
 
 @injectIntl
@@ -70,11 +74,11 @@ export default class ActionBar extends React.PureComponent {
   }
 
   handleDeleteClick = () => {
-    this.props.onDelete(this.props.status);
+    this.props.onDelete(this.props.status, this.context.router.history);
   }
 
   handleRedraftClick = () => {
-    this.props.onDelete(this.props.status, true);
+    this.props.onDelete(this.props.status, this.context.router.history, true);
   }
 
   handleDirectClick = () => {
@@ -94,7 +98,7 @@ export default class ActionBar extends React.PureComponent {
   }
 
   handleBlockClick = () => {
-    this.props.onBlock(this.props.status.get('account'));
+    this.props.onBlock(this.props.status);
   }
 
   handleReport = () => {
@@ -116,6 +120,25 @@ export default class ActionBar extends React.PureComponent {
     this.props.onEmbed(this.props.status);
   }
 
+  handleCopy = () => {
+    const url      = this.props.status.get('url');
+    const textarea = document.createElement('textarea');
+
+    textarea.textContent    = url;
+    textarea.style.position = 'fixed';
+
+    document.body.appendChild(textarea);
+
+    try {
+      textarea.select();
+      document.execCommand('copy');
+    } catch (e) {
+
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
   render () {
     const { status, intl } = this.props;
 
@@ -125,6 +148,7 @@ export default class ActionBar extends React.PureComponent {
     let menu = [];
 
     if (publicStatus) {
+      menu.push({ text: intl.formatMessage(messages.copy), action: this.handleCopy });
       menu.push({ text: intl.formatMessage(messages.embed), action: this.handleEmbed });
       menu.push(null);
     }
@@ -146,6 +170,21 @@ export default class ActionBar extends React.PureComponent {
       menu.push({ text: intl.formatMessage(messages.mute, { name: status.getIn(['account', 'username']) }), action: this.handleMuteClick });
       menu.push({ text: intl.formatMessage(messages.block, { name: status.getIn(['account', 'username']) }), action: this.handleBlockClick });
       menu.push({ text: intl.formatMessage(messages.report, { name: status.getIn(['account', 'username']) }), action: this.handleReport });
+      if (isStaff && (accountAdminLink || statusAdminLink)) {
+        menu.push(null);
+        if (accountAdminLink !== undefined) {
+          menu.push({
+            text: intl.formatMessage(messages.admin_account, { name: status.getIn(['account', 'username']) }),
+            href: accountAdminLink(status.getIn(['account', 'id'])),
+          });
+        }
+        if (statusAdminLink !== undefined) {
+          menu.push({
+            text: intl.formatMessage(messages.admin_status),
+            href: statusAdminLink(status.getIn(['account', 'id']), status.get('id')),
+          });
+        }
+      }
     }
 
     const shareButton = ('share' in navigator) && status.get('visibility') === 'public' && (
