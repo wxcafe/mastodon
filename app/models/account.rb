@@ -63,6 +63,7 @@ class Account < ApplicationRecord
   include DomainNormalizable
 
   MAX_NOTE_LENGTH = 1000
+  MAX_FIELDS = 8
   MAX_DISPLAY_NAME_LENGTH = (ENV['MAX_DISPLAY_NAME_CHARS'] || 100).to_i
 
   enum protocol: [:ostatus, :activitypub]
