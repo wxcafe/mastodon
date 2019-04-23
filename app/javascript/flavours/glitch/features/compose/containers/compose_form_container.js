@@ -22,6 +22,8 @@ import { changeLocalSetting } from 'flavours/glitch/actions/local_settings';
 
 import { privacyPreference } from 'flavours/glitch/util/privacy_preference';
 
+import { countableText } from 'flavours/glitch/util/counter';
+
 const messages = defineMessages({
   missingDescriptionMessage: {  id: 'confirmations.missing_media_description.message',
                                 defaultMessage: 'At least one media attachment is lacking a description. Consider describing all media attachments for the visually impaired before sending your toot.' },
@@ -31,6 +33,9 @@ const messages = defineMessages({
 
 //  State mapping.
 function mapStateToProps (state) {
+  const spoilerText = state.getIn(['compose', 'spoiler_text']);
+  const text = state.getIn(['compose', 'text']);
+  const count = (spoilerText + countableText(text)).length;
   const spoilersAlwaysOn = state.getIn(['local_settings', 'always_show_spoilers_field']);
   const inReplyTo = state.getIn(['compose', 'in_reply_to']);
   const replyPrivacy = inReplyTo ? state.getIn(['statuses', inReplyTo, 'visibility']) : null;
@@ -60,10 +65,10 @@ function mapStateToProps (state) {
     sideArm: sideArmPrivacy,
     sensitive: state.getIn(['compose', 'sensitive']),
     showSearch: state.getIn(['search', 'submitted']) && !state.getIn(['search', 'hidden']),
-    spoiler: spoilersAlwaysOn || state.getIn(['compose', 'spoiler']),
-    spoilerText: state.getIn(['compose', 'spoiler_text']),
+    spoiler: spoilersAlwaysOn || state.getIn(['compose', 'spoiler']) || count > 1000,
+    spoilerText: spoilerText,
     suggestions: state.getIn(['compose', 'suggestions']),
-    text: state.getIn(['compose', 'text']),
+    text: text,
     anyMedia: state.getIn(['compose', 'media_attachments']).size > 0,
     spoilersAlwaysOn: spoilersAlwaysOn,
     mediaDescriptionConfirmation: state.getIn(['local_settings', 'confirm_missing_media_description']),

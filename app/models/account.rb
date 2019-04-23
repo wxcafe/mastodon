@@ -62,9 +62,9 @@ class Account < ApplicationRecord
   include AccountCounters
   include DomainNormalizable
 
-  MAX_NOTE_LENGTH = 1000
-  MAX_FIELDS = 8
-  MAX_DISPLAY_NAME_LENGTH = (ENV['MAX_DISPLAY_NAME_CHARS'] || 100).to_i
+  MAX_DISPLAY_NAME_LENGTH = (ENV['MAX_DISPLAY_NAME_CHARS'] || 30).to_i
+  MAX_NOTE_LENGTH = (ENV['MAX_BIO_CHARS'] || 500).to_i
+  MAX_FIELDS = (ENV['MAX_PROFILE_FIELDS'] || 4).to_i
 
   enum protocol: [:ostatus, :activitypub]
 
@@ -78,46 +78,6 @@ class Account < ApplicationRecord
   validates :username, format: { with: /\A[a-z0-9_]+\z/i }, length: { maximum: 30 }, if: -> { local? && will_save_change_to_username? }
   validates_with UniqueUsernameValidator, if: -> { local? && will_save_change_to_username? }
   validates_with UnreservedUsernameValidator, if: -> { local? && will_save_change_to_username? }
-
-  # Timelines
-  has_many :stream_entries, inverse_of: :account, dependent: :destroy
-  has_many :statuses, inverse_of: :account, dependent: :destroy
-  has_many :favourites, inverse_of: :account, dependent: :destroy
-  has_many :bookmarks, inverse_of: :account, dependent: :destroy
-  has_many :mentions, inverse_of: :account, dependent: :destroy
-  has_many :notifications, inverse_of: :account, dependent: :destroy
-
-  # Pinned statuses
-  has_many :status_pins, inverse_of: :account, dependent: :destroy
-  has_many :pinned_statuses, -> { reorder('status_pins.created_at DESC') }, through: :status_pins, class_name: 'Status', source: :status
-
-  # Endorsements
-  has_many :account_pins, inverse_of: :account, dependent: :destroy
-  has_many :endorsed_accounts, through: :account_pins, class_name: 'Account', source: :target_account
-
-  # Media
-  has_many :media_attachments, dependent: :destroy
-
-  # PuSH subscriptions
-  has_many :subscriptions, dependent: :destroy
-
-  # Report relationships
-  has_many :reports
-  has_many :targeted_reports, class_name: 'Report', foreign_key: :target_account_id
-
-  has_many :report_notes, dependent: :destroy
-  has_many :custom_filters, inverse_of: :account, dependent: :destroy
-
-  # Moderation notes
-  has_many :account_moderation_notes, dependent: :destroy
-  has_many :targeted_moderation_notes, class_name: 'AccountModerationNote', foreign_key: :target_account_id, dependent: :destroy
-
-  # Lists
-  has_many :list_accounts, inverse_of: :account, dependent: :destroy
-  has_many :lists, through: :list_accounts
-
-  # Account migrations
-  belongs_to :moved_to_account, class_name: 'Account', optional: true
   validates :display_name, length: { maximum: MAX_DISPLAY_NAME_LENGTH }, if: -> { local? && will_save_change_to_display_name? }
   validates :note, note_length: { maximum: MAX_NOTE_LENGTH }, if: -> { local? && will_save_change_to_note? }
   validates :fields, length: { maximum: MAX_FIELDS }, if: -> { local? && will_save_change_to_fields? }
