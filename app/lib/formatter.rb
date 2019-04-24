@@ -63,7 +63,7 @@ class Formatter
       strikethrough: true,
       lax_spacing: true,
       space_after_headers: true,
-      superscript: true,
+    #  superscript: true,
       underline: true,
       highlight: true,
       footnotes: true
