@@ -52,6 +52,7 @@ class Formatter
       link = CGI::escapeHTML(link)
       return %(<a href="#{link}" target="_blank" rel="nofollow noopener">#{link}</a>)
     end
+
   end
 
 
@@ -64,7 +65,7 @@ class Formatter
       strikethrough: true,
       lax_spacing: true,
       space_after_headers: true,
-      superscript: true,
+  #    superscript: true,
       underline: true,
       highlight: true,
       footnotes: true
