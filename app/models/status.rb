@@ -34,6 +34,10 @@ class Status < ApplicationRecord
   include Cacheable
   include StatusThreadingConcern
 
+  # match both with and without U+FE0F (the emoji variation selector)
+  FORCE_SENSITIVE = ENV.fetch('FORCE_SENSITIVE', '').chomp.split(/,/).freeze
+  FORCE_UNLISTED = ENV.fetch('FORCE_UNLISTED', '').chomp.split(/,/).freeze
+
   # If `override_timestamps` is set at creation time, Snowflake ID creation
   # will be based on current time instead of `created_at`
   attr_accessor :override_timestamps
@@ -272,6 +276,8 @@ class Status < ApplicationRecord
 
   after_create :set_poll_id
 
+  after_find :limit_visibility
+
   class << self
     def selectable_visibilities
       visibilities.keys - %w(direct limited)
@@ -481,6 +487,13 @@ class Status < ApplicationRecord
     self.visibility = reblog.visibility if reblog? && visibility.nil?
     self.visibility = (account.locked? ? :private : :public) if visibility.nil?
     self.sensitive  = false if sensitive.nil?
+  end
+
+  def limit_visibility
+    return unless has_attribute?(:uri) && !uri.nil?
+    domain = Addressable::URI.parse(uri).host
+    self.sensitive = true if domain.in?(FORCE_SENSITIVE)
+    self.visibility = :unlisted if domain.in?(FORCE_UNLISTED)
   end
 
   def set_locality
