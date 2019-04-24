@@ -44,6 +44,16 @@ class Formatter
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
+  class APRender < Redcarpet::Render::Safe
+    include Redcarpet::Render::SmartyPants
+
+    def autolink(link, link_type)
+      return link if link_type == :email
+      link = CGI::escapeHTML(link)
+      return %(<a href="#{link}" target="_blank" rel="nofollow noopener">#{link}</a>)
+    end
+  end
+
   def format_markdown(html, me = false)
     extensions = {
       autolink: true,
@@ -62,12 +72,16 @@ class Formatter
     options = {
       link_attributes: { target: '_blank', rel: 'nofollow noopener' },
       no_styles: true,
+      hard_wrap: true
     }
 
     options[:link_attributes][:rel] += ' me' if me
 
-    renderer = Redcarpet::Render::Safe.new(options)
+    renderer = APRender.new(options)
     markdown = Redcarpet::Markdown.new(renderer, extensions)
+    #html = reformat(markdown.render(html))
+    html = html.gsub("\r\n", "\n").gsub("\r", "\n")
+    #code_safe_strip(html)
     markdown.render(html)
   end
 
@@ -78,7 +92,7 @@ class Formatter
   def plaintext(status)
     return status.text if status.local?
 
-    Kramdown::Document.new(html, input: :html).to_kramdown
+    #Kramdown::Document.new(html, input: :html).to_kramdown
   end
 
   def simplified_format(account, **options)
