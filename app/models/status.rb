@@ -275,7 +275,8 @@ class Status < ApplicationRecord
 
   after_create :set_poll_id
 
-  after_find :limit_visibility
+  before_validation :limit_visibility
+  #after_find :limit_visibility
 
   class << self
     def selectable_visibilities
