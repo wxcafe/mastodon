@@ -106,10 +106,11 @@
   }
 
   a {
-    color: $secondary-text-color;
-    text-decoration: none;
+    color: #4ea2df;
+    text-decoration: underline;
 
     &:hover {
+      color: lighten(#4ea2df, 10%);
       text-decoration: underline;
 
       .fa {
@@ -118,6 +119,8 @@
     }
 
     &.mention {
+      color: $secondary-text-color;
+      text-decoration: none;
       &:hover {
         text-decoration: none;
 
@@ -786,7 +789,7 @@ a.status-card {
   display: block;
   font-weight: 500;
   margin-bottom: 5px;
-  color: $darker-text-color;
+  color: #4ea2df;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
