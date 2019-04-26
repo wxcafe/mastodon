@@ -113,7 +113,7 @@ class ComposeForm extends ImmutablePureComponent {
     }
 
     // Submit disabled:
-    if (isSubmitting || isUploading || isChangingUpload || (!text.trim().length && !anyMedia) || (text.length > 1000 && this.props.spoilerText.length == 0)) {
+    if (isSubmitting || isUploading || isChangingUpload || (!text.trim().length && !anyMedia) || (countableText(text) > 1000 && this.props.spoilerText.length == 0)) {
       return;
     }
 
@@ -294,7 +294,7 @@ class ComposeForm extends ImmutablePureComponent {
       spoilersAlwaysOn,
     } = this.props;
 
-    let disabledButton = isSubmitting || isUploading || isChangingUpload || (!text.trim().length && !anyMedia) || (text.length > 1000 && this.props.spoilerText.length == 0);
+    let disabledButton = isSubmitting || isUploading || isChangingUpload || (!text.trim().length && !anyMedia) || (countableText(text) > 1000 && this.props.spoilerText.length == 0);
 
     return (
       <div className='composer'>
