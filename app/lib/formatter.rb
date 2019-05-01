@@ -141,7 +141,9 @@ class Formatter
 
   def linkify(text)
     html = encode_and_link_urls(text)
-    html = format_markdown(html)
+    #html = format_markdown(html)
+    html = simple_format(html, {}, sanitize: false)
+    html = html.delete("\n")
 
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
