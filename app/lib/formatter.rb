@@ -3,6 +3,21 @@
 require 'singleton'
 require_relative './sanitize_config'
 
+class HTMLRenderer < Redcarpet::Render::HTML
+  def initialize(options, linkable_accounts)
+    @linkable_accounts = linkable_accounts
+    super(options)
+  end
+
+  def normal_text(text)
+    Formatter.instance.encode_and_link_urls(text, @linkable_accounts)
+  end
+
+  def block_code(code, language)
+    "<pre><code>#{code.gsub("\n", "<br/>")}</code></pre>"
+  end
+end
+
 class Formatter
   include Singleton
   include RoutingHelper
@@ -36,16 +51,19 @@ class Formatter
 
     html = raw_content
     html = "RT @#{prepend_reblog} #{html}" if prepend_reblog
-    html = format_markdown(html) if status.content_type == 'text/markdown'
-    html = encode_and_link_urls(html, linkable_accounts, keep_html: %w(text/markdown text/html).include?(status.content_type))
+    html = format_markdown(html, linkable_accounts) if status.content_type == 'text/markdown'
+    html = encode_and_link_urls(html, linkable_accounts) unless %w(text/markdown text/html).include?(status.content_type)
     html = encode_custom_emojis(html, status.emojis, options[:autoplay]) if options[:custom_emojify]
-    html = simple_format(html, {}, sanitize: false) unless %w(text/markdown text/html).include?(status.content_type)
-    html = html.delete("\n")
+
+    unless %w(text/markdown text/html).include?(status.content_type)
+      html = simple_format(html, {}, sanitize: false)
+      html = html.delete("\n")
+    end
 
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  def format_markdown(html)
+  def format_markdown(html, linkable_accounts)
     extensions = {
       autolink: false,
       no_intra_emphasis: true,
@@ -57,29 +75,23 @@ class Formatter
       superscript: true,
       underline: true,
       highlight: true,
-      footnotes: true
+      footnotes: false,
     }
 
-    renderer = Redcarpet::Render::HTML.new({
+    renderer = HTMLRenderer.new({
       filter_html: false,
+      escape_html: false,
       no_images: true,
       no_styles: true,
       safe_links_only: true,
       hard_wrap: true,
       link_attributes: { target: '_blank', rel: 'nofollow noopener' },
-    })
+    }, linkable_accounts)
 
     markdown = Redcarpet::Markdown.new(renderer, extensions)
 
     html = reformat(markdown.render(html))
-    html = html.gsub("\r\n", "\n").gsub("\r", "\n")
-    code_safe_strip(html)
-  end
-
-  def code_safe_strip(html, char="\n")
-    html = html.split(/(<code[ >].*?\/code>)/m)
-    html.each_slice(2) { |part| part[0].delete!(char) }
-    html.join
+    html.delete("\r").delete("\n")
   end
 
   def reformat(html)
@@ -136,16 +148,6 @@ class Formatter
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  private
-
-  def html_entities
-    @html_entities ||= HTMLEntities.new
-  end
-
-  def encode(html)
-    html_entities.encode(html)
-  end
-
   def encode_and_link_urls(html, accounts = nil, options = {})
     entities = utf8_friendly_extractor(html, extract_url_without_protocol: false)
 
@@ -154,7 +156,7 @@ class Formatter
       accounts = nil
     end
 
-    rewrite(html.dup, entities, options[:keep_html]) do |entity|
+    rewrite(html.dup, entities) do |entity|
       if entity[:url]
         link_to_url(entity, options)
       elsif entity[:hashtag]
@@ -163,6 +165,16 @@ class Formatter
         link_to_mention(entity, accounts)
       end
     end
+  end
+
+  private
+
+  def html_entities
+    @html_entities ||= HTMLEntities.new
+  end
+
+  def encode(html)
+    html_entities.encode(html)
   end
 
   def count_tag_nesting(tag)
@@ -224,7 +236,7 @@ class Formatter
     html
   end
 
-  def rewrite(text, entities, keep_html = false)
+  def rewrite(text, entities)
     chars = text.to_s.to_char_a
 
     # Sort by start index
@@ -237,12 +249,12 @@ class Formatter
 
     last_index = entities.reduce(0) do |index, entity|
       indices = entity.respond_to?(:indices) ? entity.indices : entity[:indices]
-      result << (keep_html ? chars[index...indices.first].join : encode(chars[index...indices.first].join))
+      result << encode(chars[index...indices.first].join)
       result << yield(entity)
       indices.last
     end
 
-    result << (keep_html ? chars[last_index..-1].join : encode(chars[last_index..-1].join))
+    result << encode(chars[last_index..-1].join)
 
     result.flatten.join
   end
