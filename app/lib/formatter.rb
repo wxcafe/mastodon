@@ -4,17 +4,13 @@ require 'singleton'
 require_relative './sanitize_config'
 
 class HTMLRenderer < Redcarpet::Render::HTML
-  def initialize(options, linkable_accounts)
-    @linkable_accounts = linkable_accounts
-    super(options)
-  end
-
-  def normal_text(text)
-    Formatter.instance.encode_and_link_urls(text, @linkable_accounts)
-  end
-
   def block_code(code, language)
     "<pre><code>#{code.gsub("\n", "<br/>")}</code></pre>"
+  end
+
+  def autolink(link, link_type)
+    return link if link_type == :email
+    Formatter.instance.link_url(link)
   end
 end
 
@@ -51,8 +47,8 @@ class Formatter
 
     html = raw_content
     html = "RT @#{prepend_reblog} #{html}" if prepend_reblog
-    html = format_markdown(html, linkable_accounts) if status.content_type == 'text/markdown'
-    html = encode_and_link_urls(html, linkable_accounts) unless %w(text/markdown text/html).include?(status.content_type)
+    html = format_markdown(html) if status.content_type == 'text/markdown'
+    html = encode_and_link_urls(html, linkable_accounts, keep_html: %w(text/markdown text/html).include?(status.content_type))
     html = encode_custom_emojis(html, status.emojis, options[:autoplay]) if options[:custom_emojify]
 
     unless %w(text/markdown text/html).include?(status.content_type)
@@ -63,9 +59,9 @@ class Formatter
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  def format_markdown(html, linkable_accounts)
+  def format_markdown(html)
     extensions = {
-      autolink: false,
+      autolink: true,
       no_intra_emphasis: true,
       fenced_code_blocks: true,
       disable_indented_code_blocks: true,
@@ -86,7 +82,7 @@ class Formatter
       safe_links_only: true,
       hard_wrap: true,
       link_attributes: { target: '_blank', rel: 'nofollow noopener' },
-    }, linkable_accounts)
+    })
 
     markdown = Redcarpet::Markdown.new(renderer, extensions)
 
@@ -148,23 +144,8 @@ class Formatter
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  def encode_and_link_urls(html, accounts = nil, options = {})
-    entities = utf8_friendly_extractor(html, extract_url_without_protocol: false)
-
-    if accounts.is_a?(Hash)
-      options  = accounts
-      accounts = nil
-    end
-
-    rewrite(html.dup, entities) do |entity|
-      if entity[:url]
-        link_to_url(entity, options)
-      elsif entity[:hashtag]
-        link_to_hashtag(entity)
-      elsif entity[:screen_name]
-        link_to_mention(entity, accounts)
-      end
-    end
+  def link_url(url)
+    "<a href=\"#{encode(url)}\" target=\"blank\" rel=\"nofollow noopener\">#{link_html(url)}</a>"
   end
 
   private
@@ -181,6 +162,25 @@ class Formatter
     if tag[1] == '/' then -1
     elsif tag[-2] == '/' then 0
     else 1
+    end
+  end
+
+  def encode_and_link_urls(html, accounts = nil, options = {})
+    if accounts.is_a?(Hash)
+      options  = accounts
+      accounts = nil
+    end
+
+    entities = options[:keep_html] ? html_friendly_extractor(html) : utf8_friendly_extractor(html, extract_url_without_protocol: false)
+
+    rewrite(html.dup, entities, options[:keep_html]) do |entity|
+      if entity[:url]
+        link_to_url(entity, options)
+      elsif entity[:hashtag]
+        link_to_hashtag(entity)
+      elsif entity[:screen_name]
+        link_to_mention(entity, accounts)
+      end
     end
   end
 
@@ -236,7 +236,7 @@ class Formatter
     html
   end
 
-  def rewrite(text, entities)
+  def rewrite(text, entities, keep_html = false)
     chars = text.to_s.to_char_a
 
     # Sort by start index
@@ -249,12 +249,12 @@ class Formatter
 
     last_index = entities.reduce(0) do |index, entity|
       indices = entity.respond_to?(:indices) ? entity.indices : entity[:indices]
-      result << encode(chars[index...indices.first].join)
+      result << (keep_html ? chars[index...indices.first].join : encode(chars[index...indices.first].join))
       result << yield(entity)
       indices.last
     end
 
-    result << encode(chars[last_index..-1].join)
+    result << (keep_html ? chars[last_index..-1].join : encode(chars[last_index..-1].join))
 
     result.flatten.join
   end
@@ -304,6 +304,29 @@ class Formatter
     standard = Extractor.extract_entities_with_indices(text, options)
 
     Extractor.remove_overlapping_entities(special + standard)
+  end
+
+  def html_friendly_extractor(html, options = {})
+    gaps = []
+    total_offset = 0
+
+    escaped = html.gsub(/<[^>]*>/) do |match|
+      total_offset += match.length - 1
+      end_offset = Regexp.last_match.end(0)
+      gaps << [end_offset - total_offset, total_offset]
+      "\u200b"
+    end
+
+    entities = Extractor.extract_hashtags_with_indices(escaped, :check_url_overlap => false) +
+               Extractor.extract_mentions_or_lists_with_indices(escaped)
+    Extractor.remove_overlapping_entities(entities).map do |extract|
+      pos = extract[:indices].first
+      offset_idx = gaps.rindex { |gap| gap.first <= pos }
+      offset = offset_idx.nil? ? 0 : gaps[offset_idx].last
+      next extract.merge(
+        :indices => [extract[:indices].first + offset, extract[:indices].last + offset]
+      )
+    end
   end
 
   def link_to_url(entity, options = {})
