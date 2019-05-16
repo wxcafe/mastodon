@@ -90,8 +90,6 @@ class Formatter
       hard_wrap: true
     }
 
-    options[:link_attributes][:rel] += ' me' if me
-
     renderer = APRender.new(options)
     markdown = Redcarpet::Markdown.new(renderer, extensions)
     html = reformat(markdown.render(html))
