@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'singleton'
-require 'kramdown'
 require_relative './sanitize_config'
 
 class HTMLRenderer < Redcarpet::Render::HTML
@@ -38,7 +37,7 @@ class Formatter
     return '' if raw_content.blank?
 
     unless status.local?
-      html = sanitize(raw_content, Sanitize::Config::MASTODON_STRICT)
+      html = reformat(raw_content)
       html = encode_custom_emojis(html, status.emojis, options[:autoplay]) if options[:custom_emojify]
       return html.html_safe # rubocop:disable Rails/OutputSafety
     end
@@ -60,16 +59,6 @@ class Formatter
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
-  class APRender < Redcarpet::Render::Safe
-    include Redcarpet::Render::SmartyPants
-
-    def autolink(link, link_type)
-      return link if link_type == :email
-      link = CGI::escapeHTML(link)
-      return %(<a href="#{link}" target="_blank" rel="nofollow noopener">#{link}</a>)
-    end
-  end
-
   def format_markdown(html)
     extensions = {
       autolink: true,
@@ -79,29 +68,26 @@ class Formatter
       strikethrough: true,
       lax_spacing: true,
       space_after_headers: true,
+      superscript: true,
       underline: true,
       highlight: true,
-      footnotes: true
+      footnotes: false,
     }
 
-    options = {
-      link_attributes: { target: '_blank', rel: 'nofollow noopener' },
+    renderer = HTMLRenderer.new({
+      filter_html: false,
+      escape_html: false,
+      no_images: true,
       no_styles: true,
-      hard_wrap: true
-    }
+      safe_links_only: true,
+      hard_wrap: true,
+      link_attributes: { target: '_blank', rel: 'nofollow noopener' },
+    })
 
-    renderer = APRender.new(options)
     markdown = Redcarpet::Markdown.new(renderer, extensions)
-    html = reformat(markdown.render(html))
-    html = html.gsub("\r\n", "\n").gsub("\r", "\n")
-    code_safe_strip(html)
-    #markdown.render(html)
-  end
 
-  def code_safe_strip(html, char="\n")
-    html = html.split(/(<code[ >].*?\/code>)/m)
-    html.each_slice(2) { |part| part[0].delete!(char) }
-    html.join
+    html = reformat(markdown.render(html))
+    html.delete("\r").delete("\n")
   end
 
   def reformat(html)
@@ -111,7 +97,8 @@ class Formatter
   def plaintext(status)
     return status.text if status.local?
 
-    #Kramdown::Document.new(html, input: :html).to_kramdown
+    text = status.text.gsub(/(<br \/>|<br>|<\/p>)+/) { |match| "#{match}\n" }
+    strip_tags(text)
   end
 
   def simplified_format(account, **options)
@@ -125,7 +112,7 @@ class Formatter
   end
 
   def format_spoiler(status, **options)
-    html = format_markdown(status.spoiler_text)
+    html = encode(status.spoiler_text)
     html = encode_custom_emojis(html, status.emojis, options[:autoplay])
     html.html_safe # rubocop:disable Rails/OutputSafety
   end
@@ -144,7 +131,6 @@ class Formatter
 
   def format_field(account, str, **options)
     return reformat(str).html_safe unless account.local? # rubocop:disable Rails/OutputSafety
-    #html = format_markdown(str, true)
     html = encode_and_link_urls(str, me: true)
     html = encode_custom_emojis(html, account.emojis, options[:autoplay]) if options[:custom_emojify]
     html.html_safe # rubocop:disable Rails/OutputSafety
@@ -152,7 +138,6 @@ class Formatter
 
   def linkify(text)
     html = encode_and_link_urls(text)
-    #html = format_markdown(html)
     html = simple_format(html, {}, sanitize: false)
     html = html.delete("\n")
 
@@ -173,13 +158,6 @@ class Formatter
     html_entities.encode(html)
   end
 
-  def count_tag_nesting(tag)
-    if tag[1] == '/' then -1
-    elsif tag[-2] == '/' then 0
-    else 1
-    end
-  end
-
   def encode_and_link_urls(html, accounts = nil, options = {})
     if accounts.is_a?(Hash)
       options  = accounts
@@ -190,13 +168,19 @@ class Formatter
 
     rewrite(html.dup, entities, options[:keep_html]) do |entity|
       if entity[:url]
-        #link_to_url(entity, options)
-        entity[:url]
+        link_to_url(entity, options)
       elsif entity[:hashtag]
         link_to_hashtag(entity)
       elsif entity[:screen_name]
         link_to_mention(entity, accounts)
       end
+    end
+  end
+
+  def count_tag_nesting(tag)
+    if tag[1] == '/' then -1
+    elsif tag[-2] == '/' then 0
+    else 1
     end
   end
 
@@ -253,7 +237,7 @@ class Formatter
   end
 
   def rewrite(text, entities, keep_html = false)
-    chars = text.to_s.to_char_a
+    text = text.to_s
 
     # Sort by start index
     entities = entities.sort_by do |entity|
@@ -265,12 +249,12 @@ class Formatter
 
     last_index = entities.reduce(0) do |index, entity|
       indices = entity.respond_to?(:indices) ? entity.indices : entity[:indices]
-      result << (keep_html ? chars[index...indices.first].join : encode(chars[index...indices.first].join))
+      result << (keep_html ? text[index...indices.first] : encode(text[index...indices.first]))
       result << yield(entity)
       indices.last
     end
 
-    result << (keep_html ? chars[last_index..-1].join : encode(chars[last_index..-1].join))
+    result << (keep_html ? text[last_index..-1] : encode(text[last_index..-1]))
 
     result.flatten.join
   end
@@ -297,23 +281,14 @@ class Formatter
     # Note: I couldn't obtain list_slug with @user/list-name format
     # for mention so this requires additional check
     special = Extractor.extract_urls_with_indices(escaped, options).map do |extract|
-      # exactly one of :url, :hashtag, :screen_name, :cashtag keys is present
-      key = (extract.keys & [:url, :hashtag, :screen_name, :cashtag]).first
-
       new_indices = [
         old_to_new_index.find_index(extract[:indices].first),
         old_to_new_index.find_index(extract[:indices].last),
       ]
 
-      has_prefix_char = [:hashtag, :screen_name, :cashtag].include?(key)
-      value_indices = [
-        new_indices.first + (has_prefix_char ? 1 : 0), # account for #, @ or $
-        new_indices.last - 1,
-      ]
-
       next extract.merge(
-        :indices => new_indices,
-        key => text[value_indices.first..value_indices.last]
+        indices: new_indices,
+        url: text[new_indices.first..new_indices.last - 1]
       )
     end
 
@@ -353,7 +328,7 @@ class Formatter
 
     Twitter::Autolink.send(:link_to_text, entity, link_html(entity[:url]), url, html_attrs)
   rescue Addressable::URI::InvalidURIError, IDN::Idna::IdnaError
-    entity[:url]
+    encode(entity[:url])
   end
 
   def link_to_mention(entity, linkable_accounts)
