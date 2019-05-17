@@ -5,12 +5,22 @@ require_relative './sanitize_config'
 
 class HTMLRenderer < Redcarpet::Render::HTML
   def block_code(code, language)
-    "<pre><code>#{code.gsub("\n", "<br/>")}</code></pre>"
+    "<pre><code>#{encode(code).gsub("\n", "<br/>")}</code></pre>"
   end
 
   def autolink(link, link_type)
     return link if link_type == :email
     Formatter.instance.link_url(link)
+  end
+
+  private
+
+  def html_entities
+    @html_entities ||= HTMLEntities.new
+  end
+
+  def encode(html)
+    html_entities.encode(html)
   end
 end
 
@@ -60,33 +70,7 @@ class Formatter
   end
 
   def format_markdown(html)
-    extensions = {
-      autolink: true,
-      no_intra_emphasis: true,
-      fenced_code_blocks: true,
-      disable_indented_code_blocks: true,
-      strikethrough: true,
-      lax_spacing: true,
-      space_after_headers: true,
-      superscript: true,
-      underline: true,
-      highlight: true,
-      footnotes: false,
-    }
-
-    renderer = HTMLRenderer.new({
-      filter_html: false,
-      escape_html: false,
-      no_images: true,
-      no_styles: true,
-      safe_links_only: true,
-      hard_wrap: true,
-      link_attributes: { target: '_blank', rel: 'nofollow noopener' },
-    })
-
-    markdown = Redcarpet::Markdown.new(renderer, extensions)
-
-    html = reformat(markdown.render(html))
+    html = reformat(markdown_formatter.render(html))
     html.delete("\r").delete("\n")
   end
 
@@ -149,6 +133,36 @@ class Formatter
   end
 
   private
+
+  def markdown_formatter
+    return @markdown_formatter if defined?(@markdown_formatter)
+
+    extensions = {
+      autolink: true,
+      no_intra_emphasis: true,
+      fenced_code_blocks: true,
+      disable_indented_code_blocks: true,
+      strikethrough: true,
+      lax_spacing: true,
+      space_after_headers: true,
+      superscript: true,
+      underline: true,
+      highlight: true,
+      footnotes: false,
+    }
+
+    renderer = HTMLRenderer.new({
+      filter_html: false,
+      escape_html: false,
+      no_images: true,
+      no_styles: true,
+      safe_links_only: true,
+      hard_wrap: true,
+      link_attributes: { target: '_blank', rel: 'nofollow noopener' },
+    })
+
+    @markdown_formatter = Redcarpet::Markdown.new(renderer, extensions)
+  end
 
   def html_entities
     @html_entities ||= HTMLEntities.new
