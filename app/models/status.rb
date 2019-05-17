@@ -24,6 +24,7 @@
 #  local_only             :boolean
 #  full_status_text       :text             default(""), not null
 #  poll_id                :bigint(8)
+#  content_type           :string
 #
 
 class Status < ApplicationRecord
@@ -77,6 +78,7 @@ class Status < ApplicationRecord
   validates_with DisallowedHashtagsValidator
   validates :reblog, uniqueness: { scope: :account }, if: :reblog?
   validates :visibility, exclusion: { in: %w(direct limited) }, if: :reblog?
+  validates :content_type, inclusion: { in: %w(text/plain text/markdown text/html) }, allow_nil: true
 
   accepts_nested_attributes_for :poll
 
@@ -90,8 +92,8 @@ class Status < ApplicationRecord
   scope :without_reblogs, -> { where('statuses.reblog_of_id IS NULL') }
   scope :with_public_visibility, -> { where(visibility: :public) }
   scope :tagged_with, ->(tag) { joins(:statuses_tags).where(statuses_tags: { tag_id: tag }) }
-  scope :excluding_silenced_accounts, -> { left_outer_joins(:account).where(accounts: { silenced: false }) }
-  scope :including_silenced_accounts, -> { left_outer_joins(:account).where(accounts: { silenced: true }) }
+  scope :excluding_silenced_accounts, -> { left_outer_joins(:account).where(accounts: { silenced_at: nil }) }
+  scope :including_silenced_accounts, -> { left_outer_joins(:account).where.not(accounts: { silenced_at: nil }) }
   scope :not_excluded_by_account, ->(account) { where.not(account_id: account.excluded_from_timeline_account_ids) }
   scope :not_domain_blocked_by_account, ->(account) { account.excluded_from_timeline_domains.blank? ? left_outer_joins(:account) : left_outer_joins(:account).where('accounts.domain IS NULL OR accounts.domain NOT IN (?)', account.excluded_from_timeline_domains) }
   scope :tagged_with_all, ->(tags) {
@@ -333,7 +335,8 @@ class Status < ApplicationRecord
     end
 
     def as_public_timeline(account = nil, local_only = false)
-      query = timeline_scope(local_only).without_replies
+      query = timeline_scope(local_only)
+      query = query.without_replies unless Setting.show_replies_in_public_timelines
 
       apply_timeline_filters(query, account, local_only)
     end
@@ -414,9 +417,12 @@ class Status < ApplicationRecord
 
     def timeline_scope(local_only = false)
       starting_scope = local_only ? Status.local : Status
-      starting_scope
-        .with_public_visibility
-        .without_reblogs
+      starting_scope = starting_scope.with_public_visibility
+      if Setting.show_reblogs_in_public_timelines
+        starting_scope
+      else
+        starting_scope.without_reblogs
+      end
     end
 
     def apply_timeline_filters(query, account, local_only)

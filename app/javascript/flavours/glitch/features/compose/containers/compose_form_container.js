@@ -1,11 +1,12 @@
 import { connect } from 'react-redux';
-import { defineMessages } from 'react-intl';
+import { defineMessages, injectIntl } from 'react-intl';
 import ComposeForm from '../components/compose_form';
 import {
   changeCompose,
   changeComposeSpoilerText,
   changeComposeSpoilerness,
   changeComposeVisibility,
+  changeComposeContentType,
   clearComposeSuggestions,
   fetchComposeSuggestions,
   insertEmojiCompose,
@@ -62,6 +63,7 @@ function mapStateToProps (state) {
     media: state.getIn(['compose', 'media_attachments']),
     preselectDate: state.getIn(['compose', 'preselectDate']),
     privacy: state.getIn(['compose', 'privacy']),
+    contentType: state.getIn(['compose', 'content_type']),
     sideArm: sideArmPrivacy,
     sensitive: state.getIn(['compose', 'sensitive']),
     showSearch: state.getIn(['search', 'submitted']) && !state.getIn(['search', 'hidden']),
@@ -103,6 +105,10 @@ const mapDispatchToProps = (dispatch, { intl }) => ({
     dispatch(changeComposeSpoilerText(text));
   },
 
+  onChangeContentType(value) {
+    dispatch(changeComposeContentType(value));
+  },
+
   onPaste(files) {
     dispatch(uploadCompose(files));
   },
@@ -138,4 +144,4 @@ const mapDispatchToProps = (dispatch, { intl }) => ({
 
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(ComposeForm);
+export default injectIntl(connect(mapStateToProps, mapDispatchToProps)(ComposeForm));

@@ -29,6 +29,10 @@ const messages = defineMessages({
     defaultMessage: 'Adjust status privacy',
     id: 'privacy.change',
   },
+  content_type: {
+    defaultMessage: 'Content type',
+    id: 'content-type.change',
+  },
   direct_long: {
     defaultMessage: 'Post to mentioned users only',
     id: 'privacy.direct.long',
@@ -41,6 +45,10 @@ const messages = defineMessages({
     defaultMessage: 'Draw something',
     id: 'compose.attach.doodle',
   },
+  html: {
+    defaultMessage: 'HTML',
+    id: 'compose.content-type.html',
+  },
   local_only_long: {
     defaultMessage: 'Do not post to other instances',
     id: 'advanced_options.local-only.long',
@@ -48,6 +56,14 @@ const messages = defineMessages({
   local_only_short: {
     defaultMessage: 'Local-only',
     id: 'advanced_options.local-only.short',
+  },
+  markdown: {
+    defaultMessage: 'Markdown',
+    id: 'compose.content-type.markdown',
+  },
+  plain: {
+    defaultMessage: 'Plain text',
+    id: 'compose.content-type.plain',
   },
   private_long: {
     defaultMessage: 'Post to followers only',
@@ -64,10 +80,6 @@ const messages = defineMessages({
   public_short: {
     defaultMessage: 'Public',
     id: 'privacy.public.short',
-  },
-  sensitive: {
-    defaultMessage: 'Mark media as sensitive',
-    id: 'compose_form.sensitive',
   },
   spoiler: {
     defaultMessage: 'Hide text behind warning',
@@ -116,8 +128,8 @@ class ComposerOptions extends ImmutablePureComponent {
     hasPoll: PropTypes.bool,
     intl: PropTypes.object.isRequired,
     onChangeAdvancedOption: PropTypes.func,
-    onChangeSensitivity: PropTypes.func,
     onChangeVisibility: PropTypes.func,
+    onChangeContentType: PropTypes.func,
     onTogglePoll: PropTypes.func,
     onDoodleOpen: PropTypes.func,
     onModalClose: PropTypes.func,
@@ -125,9 +137,10 @@ class ComposerOptions extends ImmutablePureComponent {
     onToggleSpoiler: PropTypes.func,
     onUpload: PropTypes.func,
     privacy: PropTypes.string,
+    contentType: PropTypes.string,
     resetFileKey: PropTypes.number,
-    sensitive: PropTypes.bool,
     spoiler: PropTypes.bool,
+    showContentTypeChoice: PropTypes.bool,
   };
 
   //  Handles file selection.
@@ -168,6 +181,7 @@ class ComposerOptions extends ImmutablePureComponent {
     const {
       acceptContentTypes,
       advancedOptions,
+      contentType,
       disabled,
       allowMedia,
       hasMedia,
@@ -175,7 +189,7 @@ class ComposerOptions extends ImmutablePureComponent {
       hasPoll,
       intl,
       onChangeAdvancedOption,
-      onChangeSensitivity,
+      onChangeContentType,
       onChangeVisibility,
       onTogglePoll,
       onModalClose,
@@ -183,8 +197,8 @@ class ComposerOptions extends ImmutablePureComponent {
       onToggleSpoiler,
       privacy,
       resetFileKey,
-      sensitive,
       spoiler,
+      showContentTypeChoice,
     } = this.props;
 
     //  We predefine our privacy items so that we can easily pick the
@@ -213,6 +227,24 @@ class ComposerOptions extends ImmutablePureComponent {
         meta: <FormattedMessage {...messages.unlisted_long} />,
         name: 'unlisted',
         text: <FormattedMessage {...messages.unlisted_short} />,
+      },
+    };
+
+    const contentTypeItems = {
+      plain: {
+        icon: 'align-left',
+        name: 'text/plain',
+        text: <FormattedMessage {...messages.plain} />,
+      },
+      html: {
+        icon: 'code',
+        name: 'text/html',
+        text: <FormattedMessage {...messages.html} />,
+      },
+      markdown: {
+        icon: 'arrow-circle-down',
+        name: 'text/markdown',
+        text: <FormattedMessage {...messages.markdown} />,
       },
     };
 
@@ -264,39 +296,6 @@ class ComposerOptions extends ImmutablePureComponent {
             title={intl.formatMessage(hasPoll ? messages.remove_poll : messages.add_poll)}
           />
         )}
-        <Motion
-          defaultStyle={{ scale: 0.87 }}
-          style={{
-            scale: spring(hasMedia ? 1 : 0.87, {
-              stiffness: 200,
-              damping: 3,
-            }),
-          }}
-        >
-          {({ scale }) => (
-            <div
-              style={{
-                display: hasMedia ? null : 'none',
-                transform: `scale(${scale})`,
-              }}
-            >
-              <IconButton
-                active={sensitive}
-                className='sensitive'
-                disabled={spoiler}
-                icon={sensitive ? 'eye-slash' : 'eye'}
-                inverted
-                onClick={onChangeSensitivity}
-                size={18}
-                style={{
-                  height: null,
-                  lineHeight: null,
-                }}
-                title={intl.formatMessage(messages.sensitive)}
-              />
-            </div>
-          )}
-        </Motion>
         <hr />
         <Dropdown
           disabled={disabled}
@@ -313,6 +312,22 @@ class ComposerOptions extends ImmutablePureComponent {
           title={intl.formatMessage(messages.change_privacy)}
           value={privacy}
         />
+        {showContentTypeChoice && (
+          <Dropdown
+            disabled={disabled}
+            icon={(contentTypeItems[contentType.split('/')[1]] || {}).icon}
+            items={[
+              contentTypeItems.plain,
+              contentTypeItems.html,
+              contentTypeItems.markdown,
+            ]}
+            onChange={onChangeContentType}
+            onModalClose={onModalClose}
+            onModalOpen={onModalOpen}
+            title={intl.formatMessage(messages.content_type)}
+            value={contentType}
+          />
+        )}
         {onToggleSpoiler && (
           <TextIconButton
             active={spoiler}

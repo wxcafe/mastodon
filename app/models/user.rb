@@ -78,7 +78,7 @@ class User < ApplicationRecord
   accepts_nested_attributes_for :invite_request, reject_if: ->(attributes) { attributes['text'].blank? }
 
   validates :locale, inclusion: I18n.available_locales.map(&:to_s), if: :locale?
-  validates_with BlacklistedEmailValidator, if: :email_changed?
+  validates_with BlacklistedEmailValidator, on: :create
   validates_with EmailMxValidator, if: :validate_email_dns?
   validates :agreement, acceptance: { allow_nil: false, accept: [true, 'true', '1'] }, on: :create
 
@@ -88,7 +88,7 @@ class User < ApplicationRecord
   scope :confirmed, -> { where.not(confirmed_at: nil) }
   scope :enabled, -> { where(disabled: false) }
   scope :inactive, -> { where(arel_table[:current_sign_in_at].lt(ACTIVE_DURATION.ago)) }
-  scope :active, -> { confirmed.where(arel_table[:current_sign_in_at].gteq(ACTIVE_DURATION.ago)).joins(:account).where(accounts: { suspended: false }) }
+  scope :active, -> { confirmed.where(arel_table[:current_sign_in_at].gteq(ACTIVE_DURATION.ago)).joins(:account).where.not(accounts: { suspended_at: nil }) }
   scope :matches_email, ->(value) { where(arel_table[:email].matches("#{value}%")) }
   scope :emailable, -> { confirmed.enabled.joins(:account).merge(Account.searchable) }
 
@@ -104,16 +104,17 @@ class User < ApplicationRecord
 
   delegate :auto_play_gif, :default_sensitive, :unfollow_modal, :boost_modal, :favourite_modal, :delete_modal,
            :reduce_motion, :system_font_ui, :noindex, :flavour, :skin, :display_media, :hide_network, :hide_followers_count,
-           :expand_spoilers, :default_language, :aggregate_reblogs, :show_application, to: :settings, prefix: :setting, allow_nil: false
+           :expand_spoilers, :default_language, :aggregate_reblogs, :show_application, :default_content_type, to: :settings, prefix: :setting, allow_nil: false
 
   attr_reader :invite_code
+  attr_writer :external
 
   def confirmed?
     confirmed_at.present?
   end
 
   def invited?
-    invite_id.present?
+    invite_id.present? && invite.valid_for_use?
   end
 
   def disable!
@@ -273,11 +274,15 @@ class User < ApplicationRecord
   private
 
   def set_approved
-    self.approved = open_registrations? || invited?
+    self.approved = open_registrations? || invited? || external?
   end
 
   def open_registrations?
     Setting.registrations_mode == 'open'
+  end
+
+  def external?
+    !!@external
   end
 
   def sanitize_languages
