@@ -499,7 +499,7 @@ class Status < ApplicationRecord
     return unless has_attribute?(:uri) && !uri.nil?
     domain = Addressable::URI.parse(uri).host
     self.sensitive = true if domain.in?(FORCE_SENSITIVE)
-    self.visibility = :unlisted if domain.in?(FORCE_UNLISTED)
+    self.visibility = :unlisted if domain.in?(FORCE_UNLISTED) && public_visibility?
   end
 
 
