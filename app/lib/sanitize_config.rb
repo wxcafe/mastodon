@@ -19,6 +19,25 @@ class Sanitize
       node['class'] = class_list.join(' ')
     end
 
+    IMG_TAG_TRANSFORMER = lambda do |env|
+      node = env[:node]
+
+      return unless env[:node_name] == 'img'
+
+      node.name = 'a'
+
+      node['href'] = node['src']
+      if node['alt'].present?
+        node.content = "[🖼  #{node['alt']}]"
+      else
+        url = node['href']
+        prefix = url.match(/\Ahttps?:\/\/(www\.)?/).to_s
+        text   = url[prefix.length, 30]
+        text   = text + "…" if url[prefix.length..-1].length > 30
+        node.content = "[🖼  #{text}]"
+      end
+    end
+
     MASTODON_STRICT ||= freeze_config(
       elements: %w(p br hr span s a b u del blockquote code em strong h1 h2 h3 h4 h5 h6 ol ul li pre code sub sup strike mark),
 
@@ -31,7 +50,7 @@ class Sanitize
 
       add_attributes: {
         'a' => {
-          'rel' => 'nofollow noopener',
+          'rel' => 'nofollow noopener tag',
           'target' => '_blank',
         },
       },
@@ -43,6 +62,7 @@ class Sanitize
 
       transformers: [
         CLASS_WHITELIST_TRANSFORMER,
+        IMG_TAG_TRANSFORMER,
       ]
     )
 
