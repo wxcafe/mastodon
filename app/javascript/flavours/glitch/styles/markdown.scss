@@ -1,0 +1,42 @@
+.status__content,
+.reply-indicator__content,
+.composer--reply .content,
+.account__header__content,
+.account__header__fields,
+{
+  em { font-style: italic; }
+  strong { font-weight: bold; }
+  u { text-decoration: underline; }
+  s { text-decoration: line-through; }
+  del { text-decoration: line-through; }
+  ul { list-style: disc inside; }
+  ol { list-style: decimal inside; }
+  h1 { font-size: 18px; font-weight: bold; }
+  h2 { font-size: 16px; font-weight: bold; }
+  h3 { font-size: 14px; font-weight: bold; }
+  h4 { font-size: 12px; font-weight: bold; }
+  h5 { font-size: 10px; font-weight: bold; }
+  h6 { font-size: 8px; font-weight: bold; }
+  hr { border-color: lighten($dark-text-color, 10%); }
+  sub {
+    vertical-align: sub;
+    font-size: smaller;
+  }
+  sup {
+    vertical-align: super;
+    font-size: smaller;
+  }
+  pre, code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: lighten($dark-text-color, 33%);
+  }
+  mark {
+    background-color: #ccff15;
+    color: black;
+  }
+  blockquote {
+    margin: .2em 0 .2em 2em;
+    font-style: italic;
+  }
+}
