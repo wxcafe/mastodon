@@ -445,13 +445,22 @@
   }
 
   .autosuggest-account,
-  .autosuggest-emoji {
+  .autosuggest-emoji,
+  .autosuggest-hashtag {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     line-height: 18px;
     font-size: 14px;
+  }
+
+  .autosuggest-hashtag {
+    justify-content: space-between;
+
+    strong {
+      font-weight: 500;
+    }
   }
 
   .autosuggest-account-icon,
@@ -557,6 +566,7 @@
 
     .compose-form__upload-thumbnail {
       border-radius: 4px;
+      background-color: $base-shadow-color;
       background-position: center;
       background-size: cover;
       background-repeat: no-repeat;
@@ -753,6 +763,10 @@
     .fa {
       color: $dark-text-color;
     }
+  }
+
+  a.unhandled-link {
+    color: lighten($ui-highlight-color, 8%);
   }
 
   .status__content__spoiler-link {
@@ -1806,6 +1820,7 @@ a.account__display-name {
     justify-content: center;
     width: 100%;
     height: 100%;
+    min-height: 100vh;
 
     &__pane {
       height: 100%;
@@ -1819,6 +1834,7 @@ a.account__display-name {
       }
 
       &__inner {
+        position: fixed;
         width: 285px;
         pointer-events: auto;
         height: 100%;
@@ -1873,7 +1889,6 @@ a.account__display-name {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: darken($ui-base-color, 7%);
 }
 
 .drawer {
@@ -1937,6 +1952,9 @@ a.account__display-name {
   background: lighten($ui-base-color, 8%);
   flex: 0 0 auto;
   overflow-y: auto;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .tabs-bar__link {
@@ -2012,6 +2030,14 @@ a.account__display-name {
 
   .search__icon .fa {
     top: 15px;
+  }
+
+  .scrollable {
+    overflow: visible;
+
+    @supports(display: grid) {
+      contain: content;
+    }
   }
 
   @media screen and (min-width: $no-gap-breakpoint) {
@@ -3996,6 +4022,12 @@ a.status-card.compact:hover {
     color: lighten($secondary-text-color, 4%);
     text-decoration: underline;
   }
+}
+
+.search-results__info {
+  padding: 20px;
+  color: $darker-text-color;
+  text-align: center;
 }
 
 .modal-root {
