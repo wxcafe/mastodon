@@ -31,7 +31,6 @@ class Status < ApplicationRecord
   before_destroy :unlink_from_conversations
 
   include Paginable
-  include Streamable
   include Cacheable
   include StatusThreadingConcern
 
@@ -68,7 +67,6 @@ class Status < ApplicationRecord
   has_and_belongs_to_many :preview_cards
 
   has_one :notification, as: :activity, dependent: :destroy
-  has_one :stream_entry, as: :activity, inverse_of: :status
   has_one :status_stat, inverse_of: :status
   has_one :poll, inverse_of: :status, dependent: :destroy
 
@@ -85,7 +83,7 @@ class Status < ApplicationRecord
   default_scope { recent }
 
   scope :recent, -> { reorder(id: :desc) }
-  scope :remote, -> { where(local: false).or(where.not(uri: nil)) }
+  scope :remote, -> { where(local: false).where.not(uri: nil) }
   scope :local,  -> { where(local: true).or(where(uri: nil)) }
 
   scope :without_replies, -> { where('statuses.reply = FALSE OR statuses.in_reply_to_account_id = statuses.account_id') }
@@ -116,13 +114,11 @@ class Status < ApplicationRecord
                    :status_stat,
                    :tags,
                    :preview_cards,
-                   :stream_entry,
                    :preloadable_poll,
                    account: :account_stat,
                    active_mentions: { account: :account_stat },
                    reblog: [
                      :application,
-                     :stream_entry,
                      :tags,
                      :preview_cards,
                      :media_attachments,
@@ -207,12 +203,14 @@ class Status < ApplicationRecord
   end
 
   def hidden?
-    private_visibility? || direct_visibility? || limited_visibility?
+    !distributable?
   end
 
   def distributable?
     public_visibility? || unlisted_visibility?
   end
+
+  alias sign? distributable?
 
   def with_media?
     media_attachments.any?
@@ -535,7 +533,8 @@ class Status < ApplicationRecord
   end
 
   def update_statistics
-    return unless public_visibility? || unlisted_visibility?
+    return unless distributable?
+
     ActivityTracker.increment('activity:statuses:local')
   end
 
@@ -543,16 +542,16 @@ class Status < ApplicationRecord
     return if direct_visibility?
 
     account&.increment_count!(:statuses_count)
-    reblog&.increment_count!(:reblogs_count) if reblog? && (public_visibility? || unlisted_visibility?)
-    thread&.increment_count!(:replies_count) if in_reply_to_id.present? && (public_visibility? || unlisted_visibility?)
+    reblog&.increment_count!(:reblogs_count) if reblog?
+    thread&.increment_count!(:replies_count) if in_reply_to_id.present? && distributable?
   end
 
   def decrement_counter_caches
     return if direct_visibility? || marked_for_mass_destruction?
 
     account&.decrement_count!(:statuses_count)
-    reblog&.decrement_count!(:reblogs_count) if reblog? && (public_visibility? || unlisted_visibility?)
-    thread&.decrement_count!(:replies_count) if in_reply_to_id.present? && (public_visibility? || unlisted_visibility?)
+    reblog&.decrement_count!(:reblogs_count) if reblog?
+    thread&.decrement_count!(:replies_count) if in_reply_to_id.present? && distributable?
   end
 
   def unlink_from_conversations

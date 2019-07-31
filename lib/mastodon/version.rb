@@ -9,27 +9,23 @@ module Mastodon
     end
 
     def minor
-      8
+      9
     end
 
     def patch
-      4
-    end
-
-    def pre
-      nil
+      2
     end
 
     def flags
       ''
     end
 
-    def to_a
-      [major, minor, patch, pre].compact
-    end
-
     def suffix
       '+glitch'
+    end
+
+    def to_a
+      [major, minor, patch].compact
     end
 
     def to_s

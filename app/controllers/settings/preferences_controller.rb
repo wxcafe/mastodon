@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class Settings::PreferencesController < Settings::BaseController
+  layout 'admin'
+
+  before_action :authenticate_user!
+
   def show; end
 
   def update
@@ -8,13 +12,17 @@ class Settings::PreferencesController < Settings::BaseController
 
     if current_user.update(user_params)
       I18n.locale = current_user.locale
-      redirect_to settings_preferences_path, notice: I18n.t('generic.changes_saved_msg')
+      redirect_to after_update_redirect_path, notice: I18n.t('generic.changes_saved_msg')
     else
       render :show
     end
   end
 
   private
+
+  def after_update_redirect_path
+    settings_preferences_path
+  end
 
   def user_settings
     UserSettingsDecorator.new(current_user)
@@ -48,8 +56,10 @@ class Settings::PreferencesController < Settings::BaseController
       :setting_show_application,
       :setting_advanced_layout,
       :setting_default_content_type,
+      :setting_use_blurhash,
+      :setting_use_pending_items,
       notification_emails: %i(follow follow_request reblog favourite mention digest report pending_account),
-      interactions: %i(must_be_follower must_be_following)
+      interactions: %i(must_be_follower must_be_following must_be_following_dm)
     )
   end
 end

@@ -68,6 +68,14 @@ const messages = defineMessages({
   uploadErrorPoll:  { id: 'upload_error.poll', defaultMessage: 'File upload not allowed with polls.' },
 });
 
+const COMPOSE_PANEL_BREAKPOINT = 600 + (285 * 1) + (10 * 1);
+
+export const ensureComposeIsVisible = (getState, routerHistory) => {
+  if (!getState().getIn(['compose', 'mounted']) && window.innerWidth < COMPOSE_PANEL_BREAKPOINT) {
+    routerHistory.push('/statuses/new');
+  }
+};
+
 export function changeCompose(text) {
   return {
     type: COMPOSE_CHANGE,
@@ -81,16 +89,14 @@ export function cycleElefriendCompose() {
   };
 };
 
-export function replyCompose(status, router) {
+export function replyCompose(status, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_REPLY,
       status: status,
     });
 
-    if (router && !getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
-    }
+    ensureComposeIsVisible(getState, routerHistory);
   };
 };
 
@@ -106,29 +112,25 @@ export function resetCompose() {
   };
 };
 
-export function mentionCompose(account, router) {
+export function mentionCompose(account, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_MENTION,
       account: account,
     });
 
-    if (!getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
-    }
+    ensureComposeIsVisible(getState, routerHistory);
   };
 };
 
-export function directCompose(account, router) {
+export function directCompose(account, routerHistory) {
   return (dispatch, getState) => {
     dispatch({
       type: COMPOSE_DIRECT,
       account: account,
     });
 
-    if (!getState().getIn(['compose', 'mounted'])) {
-      router.push('/statuses/new');
-    }
+    ensureComposeIsVisible(getState, routerHistory);
   };
 };
 
@@ -136,7 +138,8 @@ export function submitCompose(routerHistory) {
   return function (dispatch, getState) {
     let status = getState().getIn(['compose', 'text'], '');
     let media  = getState().getIn(['compose', 'media_attachments']);
-    let spoilerText = getState().getIn(['compose', 'spoiler_text'], '');
+    const spoilers = getState().getIn(['compose', 'spoiler']) || getState().getIn(['local_settings', 'always_show_spoilers_field']);
+    let spoilerText = spoilers ? getState().getIn(['compose', 'spoiler_text'], '') : '';
 
     if ((!status || !status.length) && media.size === 0) {
       return;

@@ -55,6 +55,7 @@ class ComposeForm extends ImmutablePureComponent {
     onPickEmoji: PropTypes.func,
     showSearch: PropTypes.bool,
     anyMedia: PropTypes.bool,
+    singleColumn: PropTypes.bool,
 
     advancedOptions: ImmutablePropTypes.map,
     layout: PropTypes.string,
@@ -66,8 +67,6 @@ class ComposeForm extends ImmutablePureComponent {
     preselectOnReply: PropTypes.bool,
     onChangeSpoilerness: PropTypes.func,
     onChangeVisibility: PropTypes.func,
-    onMount: PropTypes.func,
-    onUnmount: PropTypes.func,
     onPaste: PropTypes.func,
     onMediaDescriptionConfirm: PropTypes.func,
   };
@@ -141,6 +140,10 @@ class ComposeForm extends ImmutablePureComponent {
     }
   }
 
+  setRef = c => {
+    this.composeForm = c;
+  };
+
   //  Inserts an emoji at the caret.
   handleEmoji = (data) => {
     const { textarea: { selectionStart } } = this;
@@ -192,19 +195,12 @@ class ComposeForm extends ImmutablePureComponent {
     }
   }
 
-  //  Tells our state the composer has been mounted.
-  componentDidMount () {
-    const { onMount } = this.props;
-    if (onMount) {
-      onMount();
-    }
-  }
-
-  //  Tells our state the composer has been unmounted.
-  componentWillUnmount () {
-    const { onUnmount } = this.props;
-    if (onUnmount) {
-      onUnmount();
+  handleFocus = () => {
+    if (this.composeForm && !this.props.singleColumn) {
+      const { left, right } = this.composeForm.getBoundingClientRect();
+      if (left < 0 || right > (window.innerWidth || document.documentElement.clientWidth)) {
+        this.composeForm.scrollIntoView();
+      }
     }
   }
 
@@ -227,6 +223,7 @@ class ComposeForm extends ImmutablePureComponent {
       preselectDate,
       text,
       preselectOnReply,
+      singleColumn,
     } = this.props;
     let selectionEnd, selectionStart;
 
@@ -246,7 +243,7 @@ class ComposeForm extends ImmutablePureComponent {
       if (textarea) {
         textarea.setSelectionRange(selectionStart, selectionEnd);
         textarea.focus();
-        textarea.scrollIntoView();
+        if (!singleColumn) textarea.scrollIntoView();
       }
 
     //  Refocuses the textarea after submitting.
@@ -307,7 +304,7 @@ class ComposeForm extends ImmutablePureComponent {
 
         <ReplyIndicatorContainer />
 
-        <div className={`composer--spoiler ${spoiler ? 'composer--spoiler--visible' : ''}`}>
+        <div className={`composer--spoiler ${spoiler ? 'composer--spoiler--visible' : ''}`} ref={this.setRef}>
           <AutosuggestInput
             placeholder={intl.formatMessage(messages.spoiler_placeholder)}
             value={spoilerText}
@@ -323,34 +320,32 @@ class ComposeForm extends ImmutablePureComponent {
             searchTokens={[':']}
             id='glitch.composer.spoiler.input'
             className='spoiler-input__input'
+            autoFocus={false}
           />
         </div>
 
-        <div className='composer--textarea'>
-          <TextareaIcons advancedOptions={advancedOptions} />
-
-          <AutosuggestTextarea
-            ref={this.setAutosuggestTextarea}
-            placeholder={intl.formatMessage(messages.placeholder)}
-            disabled={isSubmitting}
-            value={this.props.text}
-            onChange={this.handleChange}
-            suggestions={this.props.suggestions}
-            onKeyDown={this.handleKeyDown}
-            onSuggestionsFetchRequested={onFetchSuggestions}
-            onSuggestionsClearRequested={onClearSuggestions}
-            onSuggestionSelected={this.onSuggestionSelected}
-            onPaste={onPaste}
-            autoFocus={!showSearch && !isMobile(window.innerWidth, layout)}
-          />
-
+        <AutosuggestTextarea
+          ref={this.setAutosuggestTextarea}
+          placeholder={intl.formatMessage(messages.placeholder)}
+          disabled={isSubmitting}
+          value={this.props.text}
+          onChange={this.handleChange}
+          suggestions={this.props.suggestions}
+          onFocus={this.handleFocus}
+          onKeyDown={this.handleKeyDown}
+          onSuggestionsFetchRequested={onFetchSuggestions}
+          onSuggestionsClearRequested={onClearSuggestions}
+          onSuggestionSelected={this.onSuggestionSelected}
+          onPaste={onPaste}
+          autoFocus={!showSearch && !isMobile(window.innerWidth, layout)}
+        >
           <EmojiPicker onPickEmoji={handleEmoji} />
-        </div>
-
-        <div className='compose-form__modifiers'>
-          <UploadFormContainer />
-          <PollFormContainer />
-        </div>
+          <TextareaIcons advancedOptions={advancedOptions} />
+          <div className='compose-form__modifiers'>
+            <UploadFormContainer />
+            <PollFormContainer />
+          </div>
+        </AutosuggestTextarea>
 
         <OptionsContainer
           advancedOptions={advancedOptions}

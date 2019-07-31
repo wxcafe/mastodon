@@ -16,9 +16,7 @@ import { MediaGallery, Video } from '../features/ui/util/async-components';
 import { HotKeys } from 'react-hotkeys';
 import classNames from 'classnames';
 import Icon from 'mastodon/components/icon';
-import PollContainer from 'mastodon/containers/poll_container';
 import { displayMedia } from '../initial_state';
-import { is } from 'immutable';
 
 // We use the component (and not the container) since we do not want
 // to use the progress bar to show download progress
@@ -101,6 +99,7 @@ class Status extends ImmutablePureComponent {
 
   state = {
     showMedia: defaultMediaVisibility(this.props.status),
+    statusId: undefined,
   };
 
   // Track height changes we know about to compensate scrolling
@@ -116,9 +115,14 @@ class Status extends ImmutablePureComponent {
     }
   }
 
-  componentWillReceiveProps (nextProps) {
-    if (!is(nextProps.status, this.props.status) && nextProps.status) {
-      this.setState({ showMedia: defaultMediaVisibility(nextProps.status) });
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (nextProps.status && nextProps.status.get('id') !== prevState.statusId) {
+      return {
+        showMedia: defaultMediaVisibility(nextProps.status),
+        statusId: nextProps.status.get('id'),
+      };
+    } else {
+      return null;
     }
   }
 
@@ -167,6 +171,11 @@ class Status extends ImmutablePureComponent {
   }
 
   handleExpandClick = (e) => {
+    if (this.props.onClick) {
+      this.props.onClick();
+      return;
+    }
+
     if (e.button === 0) {
       if (!this.context.router) {
         return;
@@ -316,9 +325,7 @@ class Status extends ImmutablePureComponent {
       status  = status.get('reblog');
     }
 
-    if (status.get('poll')) {
-      media = <PollContainer pollId={status.get('poll')} />;
-    } else if (status.get('media_attachments').size > 0) {
+    if (status.get('media_attachments').size > 0) {
       if (this.props.muted) {
         media = (
           <AttachmentList
@@ -326,17 +333,17 @@ class Status extends ImmutablePureComponent {
             media={status.get('media_attachments')}
           />
         );
-      } else if (status.getIn(['media_attachments', 0, 'type']) === 'video') {
-        const video = status.getIn(['media_attachments', 0]);
+      } else if (['video', 'audio'].includes(status.getIn(['media_attachments', 0, 'type']))) {
+        const attachment = status.getIn(['media_attachments', 0]);
 
         media = (
           <Bundle fetchComponent={Video} loading={this.renderLoadingVideoPlayer} >
             {Component => (
               <Component
-                preview={video.get('preview_url')}
-                blurhash={video.get('blurhash')}
-                src={video.get('url')}
-                alt={video.get('description')}
+                preview={attachment.get('preview_url')}
+                blurhash={attachment.get('blurhash')}
+                src={attachment.get('url')}
+                alt={attachment.get('description')}
                 width={this.props.cachedMediaWidth}
                 height={110}
                 inline

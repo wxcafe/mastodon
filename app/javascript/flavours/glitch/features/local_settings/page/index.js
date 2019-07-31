@@ -11,13 +11,20 @@ import LocalSettingsPageItem from './item';
 
 const messages = defineMessages({
   layout_auto: {  id: 'layout.auto', defaultMessage: 'Auto' },
+  layout_auto_hint: {  id: 'layout.hint.auto', defaultMessage: 'Automatically chose layout based on “Enable advanced web interface” setting and screen size.' },
   layout_desktop: { id: 'layout.desktop', defaultMessage: 'Desktop' },
+  layout_desktop_hint: { id: 'layout.hint.desktop', defaultMessage: 'Use multiple-column layout regardless of the “Enable advanced web interface” setting or screen size.' },
   layout_mobile: { id: 'layout.single', defaultMessage: 'Mobile' },
+  layout_mobile_hint: { id: 'layout.hint.single', defaultMessage: 'Use single-column layout regardless of the “Enable advanced web interface” setting or screen size.' },
   side_arm_none: { id: 'settings.side_arm.none', defaultMessage: 'None' },
   side_arm_keep: { id: 'settings.side_arm_reply_mode.keep', defaultMessage: 'Keep secondary toot button to set privacy' },
   side_arm_copy: { id: 'settings.side_arm_reply_mode.copy', defaultMessage: 'Copy privacy setting of the toot being replied to' },
   side_arm_restrict: { id: 'settings.side_arm_reply_mode.restrict', defaultMessage: 'Restrict privacy setting to that of the toot being replied to' },
   regexp: { id: 'settings.content_warnings.regexp', defaultMessage: 'Regular expression' },
+  filters_drop: { id: 'settings.filtering_behavior.drop', defaultMessage: 'Hide filtered toots completely' },
+  filters_upstream: { id: 'settings.filtering_behavior.upstream', defaultMessage: 'Show "filtered" like vanilla Mastodon' },
+  filters_hide: { id: 'settings.filtering_behavior.hide', defaultMessage: 'Show "filtered" and add a button to display why' },
+  filters_cw: { id: 'settings.filtering_behavior.cw', defaultMessage: 'Still display the post, and add filtered words to content warning' },
 });
 
 @injectIntl
@@ -51,6 +58,14 @@ export default class LocalSettingsPage extends React.PureComponent {
           <FormattedMessage id='settings.hicolor_privacy_icons' defaultMessage='High color privacy icons' />
           <span className='hint'><FormattedMessage id='settings.hicolor_privacy_icons.hint' defaultMessage="Display privacy icons in bright and easily distinguishable colors" /></span>
         </LocalSettingsPageItem>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['confirm_boost_missing_media_description']}
+          id='mastodon-settings--confirm_boost_missing_media_description'
+          onChange={onChange}
+        >
+          <FormattedMessage id='settings.confirm_boost_missing_media_description' defaultMessage='Show confirmation dialog before boosting toots lacking media descriptions' />
+        </LocalSettingsPageItem>
         <section>
           <h2><FormattedMessage id='settings.notifications_opts' defaultMessage='Notifications options' /></h2>
           <LocalSettingsPageItem
@@ -79,9 +94,9 @@ export default class LocalSettingsPage extends React.PureComponent {
             item={['layout']}
             id='mastodon-settings--layout'
             options={[
-              { value: 'auto', message: intl.formatMessage(messages.layout_auto) },
-              { value: 'multiple', message: intl.formatMessage(messages.layout_desktop) },
-              { value: 'single', message: intl.formatMessage(messages.layout_mobile) },
+              { value: 'auto', message: intl.formatMessage(messages.layout_auto), hint: intl.formatMessage(messages.layout_auto_hint) },
+              { value: 'multiple', message: intl.formatMessage(messages.layout_desktop), hint: intl.formatMessage(messages.layout_desktop_hint) },
+              { value: 'single', message: intl.formatMessage(messages.layout_mobile), hint: intl.formatMessage(messages.layout_mobile_hint) },
             ]}
             onChange={onChange}
           >
@@ -209,6 +224,25 @@ export default class LocalSettingsPage extends React.PureComponent {
           placeholder={intl.formatMessage(messages.regexp)}
         >
           <FormattedMessage id='settings.content_warnings_filter' defaultMessage='Content warnings to not automatically unfold:' />
+        </LocalSettingsPageItem>
+      </div>
+    ),
+    ({ intl, onChange, settings }) => (
+      <div className='glitch local-settings__page filters'>
+        <h1><FormattedMessage id='settings.filters' defaultMessage='Filters' /></h1>
+        <LocalSettingsPageItem
+          settings={settings}
+          item={['filtering_behavior']}
+          id='mastodon-settings--filters-behavior'
+          onChange={onChange}
+          options={[
+            { value: 'drop', message: intl.formatMessage(messages.filters_drop) },
+            { value: 'upstream', message: intl.formatMessage(messages.filters_upstream) },
+            { value: 'hide', message: intl.formatMessage(messages.filters_hide) },
+            { value: 'content_warning', message: intl.formatMessage(messages.filters_cw) }
+          ]}
+        >
+          <FormattedMessage id='settings.filtering_behavior' defaultMessage='Filtering behavior' />
         </LocalSettingsPageItem>
       </div>
     ),
