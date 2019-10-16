@@ -40,8 +40,10 @@ class Followers extends ImmutablePureComponent {
   };
 
   componentWillMount () {
-    this.props.dispatch(fetchAccount(this.props.params.accountId));
-    this.props.dispatch(fetchFollowers(this.props.params.accountId));
+    if (!this.props.accountIds) {
+      this.props.dispatch(fetchAccount(this.props.params.accountId));
+      this.props.dispatch(fetchFollowers(this.props.params.accountId));
+    }
   }
 
   componentWillReceiveProps (nextProps) {
@@ -78,7 +80,7 @@ class Followers extends ImmutablePureComponent {
 
     return (
       <Column>
-        <ColumnBackButton />
+        <ColumnBackButton multiColumn={multiColumn} />
 
         <ScrollableList
           scrollKey='followers'

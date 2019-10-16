@@ -25,11 +25,13 @@
 #  full_status_text       :text             default(""), not null
 #  poll_id                :bigint(8)
 #  content_type           :string
+#  deleted_at             :datetime
 #
 
 class Status < ApplicationRecord
   before_destroy :unlink_from_conversations
 
+  include Discard::Model
   include Paginable
   include Cacheable
   include StatusThreadingConcern
@@ -37,12 +39,13 @@ class Status < ApplicationRecord
   # match both with and without U+FE0F (the emoji variation selector)
   FORCE_SENSITIVE = ENV.fetch('FORCE_SENSITIVE', '').chomp.split(/,/).freeze
   FORCE_UNLISTED = ENV.fetch('FORCE_UNLISTED', '').chomp.split(/,/).freeze
+  self.discard_column = :deleted_at
 
   # If `override_timestamps` is set at creation time, Snowflake ID creation
   # will be based on current time instead of `created_at`
   attr_accessor :override_timestamps
 
-  update_index('statuses#status', :proper) if Chewy.enabled?
+  update_index('statuses#status', :proper)
 
   enum visibility: [:public, :unlisted, :private, :direct, :limited], _suffix: :visibility
 
@@ -81,7 +84,7 @@ class Status < ApplicationRecord
 
   accepts_nested_attributes_for :poll
 
-  default_scope { recent }
+  default_scope { recent.kept }
 
   scope :recent, -> { reorder(id: :desc) }
   scope :remote, -> { where(local: false).where.not(uri: nil) }
@@ -136,12 +139,14 @@ class Status < ApplicationRecord
   REAL_TIME_WINDOW = 6.hours
 
   def searchable_by(preloaded = nil)
-    ids = [account_id]
+    ids = []
+
+    ids << account_id if local?
 
     if preloaded.nil?
-      ids += mentions.pluck(:account_id)
-      ids += favourites.pluck(:account_id)
-      ids += reblogs.pluck(:account_id)
+      ids += mentions.where(account: Account.local).pluck(:account_id)
+      ids += favourites.where(account: Account.local).pluck(:account_id)
+      ids += reblogs.where(account: Account.local).pluck(:account_id)
     else
       ids += preloaded.mentions[id] || []
       ids += preloaded.favourites[id] || []
@@ -221,6 +226,10 @@ class Status < ApplicationRecord
     !sensitive? && with_media?
   end
 
+  def reported?
+    @reported ||= Report.where(target_account: account).unresolved.where('? = ANY(status_ids)', id).exists?
+  end
+
   def emojis
     return @emojis if defined?(@emojis)
 
@@ -285,10 +294,6 @@ class Status < ApplicationRecord
 
     def in_chosen_languages(account)
       where(language: nil).or where(language: account.chosen_languages)
-    end
-
-    def as_home_timeline(account)
-      where(account: [account] + account.following).where(visibility: [:public, :unlisted, :private])
     end
 
     def as_direct_timeline(account, limit = 20, max_id = nil, since_id = nil, cache_ids = false)
@@ -358,7 +363,7 @@ class Status < ApplicationRecord
     end
 
     def reblogs_map(status_ids, account_id)
-      select('reblog_of_id').where(reblog_of_id: status_ids).where(account_id: account_id).reorder(nil).each_with_object({}) { |s, h| h[s.reblog_of_id] = true }
+      unscoped.select('reblog_of_id').where(reblog_of_id: status_ids).where(account_id: account_id).each_with_object({}) { |s, h| h[s.reblog_of_id] = true }
     end
 
     def mutes_map(conversation_ids, account_id)
@@ -461,13 +466,16 @@ class Status < ApplicationRecord
     '👁'
   end
 
+  def status_stat
+    super || build_status_stat
+  end
+
   private
 
   def update_status_stat!(attrs)
     return if marked_for_destruction? || destroyed?
 
-    record = status_stat || build_status_stat
-    record.update(attrs)
+    status_stat.update(attrs)
   end
 
   def store_uri

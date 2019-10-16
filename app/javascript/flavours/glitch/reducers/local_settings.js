@@ -22,6 +22,8 @@ const initialState = ImmutableMap({
   hicolor_privacy_icons: false,
   show_content_type_choice: false,
   filtering_behavior: 'hide',
+  tag_misleading_links: true,
+  rewrite_mentions: 'no',
   content_warnings : ImmutableMap({
     auto_unfold : false,
     filter      : null,
