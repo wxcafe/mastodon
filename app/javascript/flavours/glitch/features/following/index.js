@@ -24,8 +24,8 @@ const mapStateToProps = (state, props) => ({
   hasMore: !!state.getIn(['user_lists', 'following', props.params.accountId, 'next']),
 });
 
-@connect(mapStateToProps)
-export default class Following extends ImmutablePureComponent {
+export default @connect(mapStateToProps)
+class Following extends ImmutablePureComponent {
 
   static propTypes = {
     params: PropTypes.object.isRequired,
@@ -33,11 +33,14 @@ export default class Following extends ImmutablePureComponent {
     accountIds: ImmutablePropTypes.list,
     hasMore: PropTypes.bool,
     isAccount: PropTypes.bool,
+    multiColumn: PropTypes.bool,
   };
 
   componentWillMount () {
-    this.props.dispatch(fetchAccount(this.props.params.accountId));
-    this.props.dispatch(fetchFollowing(this.props.params.accountId));
+    if (!this.props.accountIds) {
+      this.props.dispatch(fetchAccount(this.props.params.accountId));
+      this.props.dispatch(fetchFollowing(this.props.params.accountId));
+    }
   }
 
   componentWillReceiveProps (nextProps) {
@@ -60,7 +63,6 @@ export default class Following extends ImmutablePureComponent {
   }
 
   handleLoadMore = debounce(() => {
-    e.preventDefault();
     this.props.dispatch(expandFollowing(this.props.params.accountId));
   }, 300, { leading: true });
 
@@ -69,7 +71,7 @@ export default class Following extends ImmutablePureComponent {
   }
 
   render () {
-    const { accountIds, hasMore, isAccount } = this.props;
+    const { accountIds, hasMore, isAccount, multiColumn } = this.props;
 
     if (!isAccount) {
       return (
@@ -91,7 +93,7 @@ export default class Following extends ImmutablePureComponent {
 
     return (
       <Column ref={this.setRef}>
-        <ProfileColumnHeader onClick={this.handleHeaderClick} />
+        <ProfileColumnHeader onClick={this.handleHeaderClick} multiColumn={multiColumn} />
 
         <ScrollableList
           scrollKey='following'
@@ -100,6 +102,7 @@ export default class Following extends ImmutablePureComponent {
           prepend={<HeaderContainer accountId={this.props.params.accountId} hideTabs />}
           alwaysPrepend
           emptyMessage={emptyMessage}
+          bindToDocument={!multiColumn}
         >
           {accountIds.map(id =>
             <AccountContainer key={id} id={id} withNote={false} />

@@ -21,9 +21,9 @@ const mapStateToProps = state => ({
   hasMore: !!state.getIn(['status_lists', 'bookmarks', 'next']),
 });
 
-@connect(mapStateToProps)
+export default @connect(mapStateToProps)
 @injectIntl
-export default class Bookmarks extends ImmutablePureComponent {
+class Bookmarks extends ImmutablePureComponent {
 
   static propTypes = {
     dispatch: PropTypes.func.isRequired,
@@ -73,7 +73,7 @@ export default class Bookmarks extends ImmutablePureComponent {
     const emptyMessage = <FormattedMessage id='empty_column.bookmarked_statuses' defaultMessage="You don't have any bookmarked toots yet. When you bookmark one, it will show up here." />;
 
     return (
-      <Column ref={this.setRef} name='bookmarks'>
+      <Column bindToDocument={!multiColumn} ref={this.setRef} name='bookmarks'>
         <ColumnHeader
           icon='bookmark'
           title={intl.formatMessage(messages.heading)}
@@ -93,6 +93,7 @@ export default class Bookmarks extends ImmutablePureComponent {
           isLoading={isLoading}
           onLoadMore={this.handleLoadMore}
           emptyMessage={emptyMessage}
+          bindToDocument={!multiColumn}
         />
       </Column>
     );

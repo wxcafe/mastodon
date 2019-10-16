@@ -47,7 +47,7 @@ const mapStateToProps = state => ({
   notifications: getNotifications(state),
   localSettings:  state.get('local_settings'),
   isLoading: state.getIn(['notifications', 'isLoading'], true),
-  isUnread: state.getIn(['notifications', 'unread']) > 0,
+  isUnread: state.getIn(['notifications', 'unread']) > 0 || state.getIn(['notifications', 'pendingItems']).size > 0,
   hasMore: state.getIn(['notifications', 'hasMore']),
   numPending: state.getIn(['notifications', 'pendingItems'], ImmutableList()).size,
   notifCleaningActive: state.getIn(['notifications', 'cleaningMode']),
@@ -67,9 +67,9 @@ const mapDispatchToProps = dispatch => ({
   dispatch,
 });
 
-@connect(mapStateToProps, mapDispatchToProps)
+export default @connect(mapStateToProps, mapDispatchToProps)
 @injectIntl
-export default class Notifications extends React.PureComponent {
+class Notifications extends React.PureComponent {
 
   static propTypes = {
     columnId: PropTypes.string,
@@ -226,6 +226,7 @@ export default class Notifications extends React.PureComponent {
         onScrollToTop={this.handleScrollToTop}
         onScroll={this.handleScroll}
         shouldUpdateScroll={shouldUpdateScroll}
+        bindToDocument={!multiColumn}
       >
         {scrollableContent}
       </ScrollableList>
@@ -233,6 +234,7 @@ export default class Notifications extends React.PureComponent {
 
     return (
       <Column
+        bindToDocument={!multiColumn}
         ref={this.setColumnRef}
         name='notifications'
         extraClasses={this.props.notifCleaningActive ? 'notif-cleaning' : null}

@@ -17,6 +17,7 @@ import {
   COMPOSE_SUGGESTIONS_CLEAR,
   COMPOSE_SUGGESTIONS_READY,
   COMPOSE_SUGGESTION_SELECT,
+  COMPOSE_SUGGESTION_TAGS_UPDATE,
   COMPOSE_TAG_HISTORY_UPDATE,
   COMPOSE_SENSITIVITY_CHANGE,
   COMPOSE_SPOILERNESS_CHANGE,
@@ -102,10 +103,13 @@ function clearAll(state) {
   });
 };
 
-function appendMedia(state, media) {
+function appendMedia(state, media, file) {
   const prevSize = state.get('media_attachments').size;
 
   return state.withMutations(map => {
+    if (media.get('type') === 'image') {
+      media = media.set('file', file);
+    }
     map.update('media_attachments', list => list.push(media));
     map.set('is_uploading', false);
     map.set('resetFileKey', Math.floor((Math.random() * 0x10000)));
@@ -153,9 +157,9 @@ const sortHashtagsByUse = (state, tags) => {
     if (usedA === usedB) {
       return 0;
     } else if (usedA && !usedB) {
-      return 1;
-    } else {
       return -1;
+    } else {
+      return 1;
     }
   });
 };
@@ -205,14 +209,34 @@ const expiresInFromExpiresAt = expires_at => {
   return [300, 1800, 3600, 21600, 86400, 259200, 604800].find(expires_in => expires_in >= delta) || 24 * 3600;
 };
 
-const normalizeSuggestions = (state, { accounts, emojis, tags }) => {
+const mergeLocalHashtagResults = (suggestions, prefix, tagHistory) => {
+  prefix = prefix.toLowerCase();
+  if (suggestions.length < 4) {
+    const localTags = tagHistory.filter(tag => tag.toLowerCase().startsWith(prefix) && !suggestions.some(suggestion => suggestion.type === 'hashtag' && suggestion.name.toLowerCase() === tag.toLowerCase()));
+    return suggestions.concat(localTags.slice(0, 4 - suggestions.length).toJS().map(tag => ({ type: 'hashtag', name: tag })));
+  } else {
+    return suggestions;
+  }
+};
+
+const normalizeSuggestions = (state, { accounts, emojis, tags, token }) => {
   if (accounts) {
     return accounts.map(item => ({ id: item.id, type: 'account' }));
   } else if (emojis) {
     return emojis.map(item => ({ ...item, type: 'emoji' }));
   } else {
-    return sortHashtagsByUse(state, tags.map(item => ({ ...item, type: 'hashtag' })));
+    return mergeLocalHashtagResults(sortHashtagsByUse(state, tags.map(item => ({ ...item, type: 'hashtag' }))), token.slice(1), state.get('tagHistory'));
   }
+};
+
+const updateSuggestionTags = (state, token) => {
+  const prefix = token.slice(1);
+
+  const suggestions = state.get('suggestions').toJS();
+  return state.merge({
+    suggestions: ImmutableList(mergeLocalHashtagResults(suggestions, prefix, state.get('tagHistory'))),
+    suggestion_token: token,
+  });
 };
 
 export default function compose(state = initialState, action) {
@@ -300,7 +324,7 @@ export default function compose(state = initialState, action) {
   case COMPOSE_UPLOAD_REQUEST:
     return state.set('is_uploading', true);
   case COMPOSE_UPLOAD_SUCCESS:
-    return appendMedia(state, fromJS(action.media));
+    return appendMedia(state, fromJS(action.media), action.file);
   case COMPOSE_UPLOAD_FAIL:
     return state.set('is_uploading', false);
   case COMPOSE_UPLOAD_UNDO:
@@ -328,6 +352,8 @@ export default function compose(state = initialState, action) {
     return state.set('suggestions', ImmutableList(normalizeSuggestions(state, action))).set('suggestion_token', action.token);
   case COMPOSE_SUGGESTION_SELECT:
     return insertSuggestion(state, action.position, action.token, action.completion, action.path);
+  case COMPOSE_SUGGESTION_TAGS_UPDATE:
+    return updateSuggestionTags(state, action.token);
   case COMPOSE_TAG_HISTORY_UPDATE:
     return state.set('tagHistory', fromJS(action.tags));
   case TIMELINE_DELETE:
