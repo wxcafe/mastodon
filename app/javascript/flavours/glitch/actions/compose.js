@@ -91,9 +91,11 @@ export function cycleElefriendCompose() {
 
 export function replyCompose(status, routerHistory) {
   return (dispatch, getState) => {
+    const prependCWRe = getState().getIn(['local_settings', 'prepend_cw_re']);
     dispatch({
       type: COMPOSE_REPLY,
       status: status,
+      prependCWRe: prependCWRe,
     });
 
     ensureComposeIsVisible(getState, routerHistory);
@@ -232,10 +234,11 @@ export function uploadCompose(files) {
   return function (dispatch, getState) {
     const uploadLimit = 4;
     const media  = getState().getIn(['compose', 'media_attachments']);
+    const pending  = getState().getIn(['compose', 'pending_media_attachments']);
     const progress = new Array(files.length).fill(0);
     let total = Array.from(files).reduce((a, v) => a + v.size, 0);
 
-    if (files.length + media.size > uploadLimit) {
+    if (files.length + media.size + pending > uploadLimit) {
       dispatch(showAlert(undefined, messages.uploadErrorLimit));
       return;
     }
