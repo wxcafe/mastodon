@@ -14,6 +14,7 @@ import { unescapeHTML } from 'flavours/glitch/util/html';
 import { getFiltersRegex } from 'flavours/glitch/selectors';
 import { usePendingItems as preferPendingItems } from 'flavours/glitch/util/initial_state';
 import compareId from 'flavours/glitch/util/compare_id';
+import { searchTextFromRawStatus } from 'flavours/glitch/actions/importer/normalizer';
 
 export const NOTIFICATIONS_UPDATE = 'NOTIFICATIONS_UPDATE';
 
@@ -71,7 +72,7 @@ export function updateNotifications(notification, intlMessages, intlLocale) {
     if (notification.type === 'mention') {
       const dropRegex   = filters[0];
       const regex       = filters[1];
-      const searchIndex = notification.status.spoiler_text + '\n' + unescapeHTML(notification.status.content);
+      const searchIndex = searchTextFromRawStatus(notification.status);
 
       if (dropRegex && dropRegex.test(searchIndex)) {
         return;
@@ -120,7 +121,7 @@ const excludeTypesFromSettings = state => state.getIn(['settings', 'notification
 
 
 const excludeTypesFromFilter = filter => {
-  const allTypes = ImmutableList(['follow', 'favourite', 'reblog', 'mention', 'poll']);
+  const allTypes = ImmutableList(['follow', 'follow_request', 'favourite', 'reblog', 'mention', 'poll']);
   return allTypes.filterNot(item => item === filter).toJS();
 };
 
@@ -167,9 +168,9 @@ export function expandNotifications({ maxId } = {}, done = noOp) {
 
       dispatch(expandNotificationsSuccess(response.data, next ? next.uri : null, isLoadingMore, isLoadingRecent, isLoadingRecent && preferPendingItems));
       fetchRelatedRelationships(dispatch, response.data);
-      done();
     }).catch(error => {
       dispatch(expandNotificationsFail(error, isLoadingMore));
+    }).finally(() => {
       done();
     });
   };
@@ -198,6 +199,7 @@ export function expandNotificationsFail(error, isLoadingMore) {
     type: NOTIFICATIONS_EXPAND_FAIL,
     error,
     skipLoading: !isLoadingMore,
+    skipAlert: !isLoadingMore,
   };
 };
 
