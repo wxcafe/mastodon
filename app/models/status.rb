@@ -289,9 +289,6 @@ class Status < ApplicationRecord
 
   after_create :set_poll_id
 
-  before_validation :limit_visibility
-  #after_find :limit_visibility
-
   class << self
     def selectable_visibilities
       visibilities.keys - %w(direct limited)
@@ -503,16 +500,10 @@ class Status < ApplicationRecord
   def set_visibility
     self.visibility = reblog.visibility if reblog? && visibility.nil?
     self.visibility = (account.locked? ? :private : :public) if visibility.nil?
+    self.visibility = :unlisted if public_visibility? && account.domain.in?(FORCE_UNLISTED)
+    self.sensitive = true if account.domain.in?(FORCE_SENSITIVE)
     self.sensitive  = false if sensitive.nil?
   end
-
-  def limit_visibility
-    return unless has_attribute?(:uri) && !uri.nil?
-    domain = Addressable::URI.parse(uri).host
-    self.sensitive = true if domain.in?(FORCE_SENSITIVE)
-    self.visibility = :unlisted if domain.in?(FORCE_UNLISTED) && public_visibility?
-  end
-
 
   def set_locality
     if account.domain.nil? && !attribute_changed?(:local_only)
