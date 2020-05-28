@@ -1031,12 +1031,10 @@
     }
 
     .display-name {
+      color: $light-text-color;
+
       strong {
         color: $inverted-text-color;
-      }
-
-      span {
-        color: $light-text-color;
       }
     }
 
@@ -1323,7 +1321,12 @@
 
 .account__avatar {
   @include avatar-radius;
+  display: block;
   position: relative;
+
+  width: 36px;
+  height: 36px;
+  background-size: 36px 36px;
 
   &-inline {
     display: inline-block;
@@ -1336,7 +1339,6 @@
     border-radius: 50%;
     overflow: hidden;
     position: relative;
-    cursor: default;
 
     & > div {
       float: left;
@@ -1368,6 +1370,12 @@ a .account__avatar {
   &-base {
     @include avatar-radius;
     @include avatar-size(36px);
+
+    img {
+      @include avatar-radius;
+      width: 100%;
+      height: 100%;
+    }
   }
 
   &-overlay {
@@ -1378,6 +1386,12 @@ a .account__avatar {
     bottom: 0;
     right: 0;
     z-index: 1;
+
+    img {
+      @include avatar-radius;
+      width: 100%;
+      height: 100%;
+    }
   }
 }
 
@@ -3806,7 +3820,8 @@ a.status-card.compact:hover {
 }
 
 .empty-column-indicator,
-.error-column {
+.error-column,
+.follow_requests-unlocked_explanation {
   color: $dark-text-color;
   background: $ui-base-color;
   text-align: center;
@@ -3835,6 +3850,11 @@ a.status-card.compact:hover {
       text-decoration: underline;
     }
   }
+}
+
+.follow_requests-unlocked_explanation {
+  background: darken($ui-base-color, 4%);
+  contain: initial;
 }
 
 .error-column {
@@ -5575,6 +5595,13 @@ a.status-card.compact:hover {
   }
 }
 
+.gifv {
+  video {
+    max-width: 100vw;
+    max-height: 80vh;
+  }
+}
+
 .directory {
   &__list {
     width: 100%;
@@ -6552,6 +6579,7 @@ noscript {
 
       path:last-child {
         stroke: lighten($highlight-text-color, 6%) !important;
+        fill: none !important;
       }
     }
   }
@@ -6573,6 +6601,7 @@ noscript {
     padding: 10px;
     padding-top: 12px;
     position: relative;
+    cursor: pointer;
   }
 
   &__unread {

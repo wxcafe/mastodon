@@ -148,7 +148,7 @@ class Status < ApplicationRecord
     ids << account_id if local?
 
     if preloaded.nil?
-      ids += mentions.where(account: Account.local).pluck(:account_id)
+      ids += mentions.where(account: Account.local, silent: false).pluck(:account_id)
       ids += favourites.where(account: Account.local).pluck(:account_id)
       ids += reblogs.where(account: Account.local).pluck(:account_id)
       ids += bookmarks.where(account: Account.local).pluck(:account_id)
@@ -204,18 +204,6 @@ class Status < ApplicationRecord
 
   def preview_card
     preview_cards.first
-  end
-
-  def title
-    if destroyed?
-      "#{account.acct} deleted status"
-    elsif reblog?
-      preview = sensitive ? '<sensitive>' : text.slice(0, 10).split("\n")[0]
-      "#{account.acct} shared #{reblog.account.acct}'s: #{preview}"
-    else
-      preview = sensitive ? '<sensitive>' : text.slice(0, 20).split("\n")[0]
-      "#{account.acct}: #{preview}"
-    end
   end
 
   def hidden?
@@ -350,7 +338,7 @@ class Status < ApplicationRecord
       query = timeline_scope(local_only)
       query = query.without_replies unless Setting.show_replies_in_public_timelines
 
-      apply_timeline_filters(query, account, local_only)
+      apply_timeline_filters(query, account, [:local, true].include?(local_only))
     end
 
     def as_tag_timeline(tag, account = nil, local_only = false)
@@ -408,7 +396,7 @@ class Status < ApplicationRecord
 
       if account.nil?
         where(visibility: visibility).not_local_only
-      elsif target_account.blocking?(account) # get rid of blocked peeps
+      elsif target_account.blocking?(account) || (account.domain.present? && target_account.domain_blocking?(account.domain)) # get rid of blocked peeps
         none
       elsif account.id == target_account.id # author can see own stuff
         all
@@ -433,7 +421,7 @@ class Status < ApplicationRecord
           if TagManager.instance.local_url?(url)
             ActivityPub::TagManager.instance.uri_to_resource(url, Status)
           else
-            Status.find_by(uri: url) || Status.find_by(url: url)
+            EntityCache.instance.status(url)
           end
         end
         status&.distributable? ? status : nil
@@ -442,8 +430,15 @@ class Status < ApplicationRecord
 
     private
 
-    def timeline_scope(local_only = false)
-      starting_scope = local_only ? Status.local : Status
+    def timeline_scope(scope = false)
+      starting_scope = case scope
+                       when :local, true
+                         Status.local
+                       when :remote
+                         Status.remote
+                       else
+                         Status
+                       end
       starting_scope = starting_scope.with_public_visibility
       if Setting.show_reblogs_in_public_timelines
         starting_scope
