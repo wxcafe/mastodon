@@ -39,6 +39,20 @@ class Rack::Attack
   end
 
   Rack::Attack.safelist('allow from localhost') do |req|
+#    private_networks = [
+#      IPAddr.new("127.0.0.0/8"),
+#      IPAddr.new("10.0.0.0/8"),
+#      IPAddr.new("172.16.0.0/12"),
+#      IPAddr.new("192.168.0.0/16"),
+#      IPAddr.new("169.254.0.0/16"),
+#      IPAddr.new("::1/128"),
+#      IPAddr.new("fd80::/10"),
+#      IPAddr.new("fd00::/8")
+#    ]
+#
+#    private_networks.each do |network|
+#      network.include?(req.remote_ip)
+#    end
     req.remote_ip == '127.0.0.1' || req.remote_ip == '::1'
   end
 
