@@ -66,8 +66,8 @@ export default class DetailedStatus extends ImmutablePureComponent {
     e.stopPropagation();
   }
 
-  handleOpenVideo = (media, startTime) => {
-    this.props.onOpenVideo(media, startTime);
+  handleOpenVideo = (media, options) => {
+    this.props.onOpenVideo(media, options);
   }
 
   _measureHeight (heightJustChanged) {
@@ -142,8 +142,11 @@ export default class DetailedStatus extends ImmutablePureComponent {
             src={attachment.get('url')}
             alt={attachment.get('description')}
             duration={attachment.getIn(['meta', 'original', 'duration'], 0)}
-            height={110}
-            preload
+            poster={attachment.get('preview_url') || status.getIn(['account', 'avatar_static'])}
+            backgroundColor={attachment.getIn(['meta', 'colors', 'background'])}
+            foregroundColor={attachment.getIn(['meta', 'colors', 'foreground'])}
+            accentColor={attachment.getIn(['meta', 'colors', 'accent'])}
+            height={150}
           />
         );
         mediaIcon = 'music';
@@ -184,7 +187,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
         mediaIcon = 'picture-o';
       }
     } else if (status.get('card')) {
-      media = <Card onOpenMedia={this.props.onOpenMedia} card={status.get('card')} />;
+      media = <Card sensitive={status.get('sensitive')} onOpenMedia={this.props.onOpenMedia} card={status.get('card')} />;
       mediaIcon = 'link';
     }
 
@@ -198,8 +201,8 @@ export default class DetailedStatus extends ImmutablePureComponent {
       reblogIcon = 'lock';
     }
 
-    if (status.get('visibility') === 'private') {
-      reblogLink = <Icon id={reblogIcon} />;
+    if (!['unlisted', 'public'].includes(status.get('visibility'))) {
+      reblogLink = null;
     } else if (this.context.router) {
       reblogLink = (
         <Link to={`/statuses/${status.get('id')}/reblogs`} className='detailed-status__link'>
@@ -265,7 +268,7 @@ export default class DetailedStatus extends ImmutablePureComponent {
           <div className='detailed-status__meta'>
             <a className='detailed-status__datetime' href={status.get('url')} target='_blank' rel='noopener noreferrer'>
               <FormattedDate value={new Date(status.get('created_at'))} hour12={false} year='numeric' month='short' day='2-digit' hour='2-digit' minute='2-digit' />
-            </a>{applicationLink} · {reblogLink} · {favouriteLink} · <VisibilityIcon visibility={status.get('visibility')} />
+            </a>{applicationLink} {!!reblogLink && ['·', reblogLink]} · {favouriteLink} · <VisibilityIcon visibility={status.get('visibility')} />
           </div>
         </div>
       </div>
