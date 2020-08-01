@@ -39,8 +39,6 @@ class Status < ApplicationRecord
 
   rate_limit by: :account, family: :statuses
 
-  FORCE_SENSITIVE = ENV.fetch('FORCE_SENSITIVE', '').chomp.split(/,/).freeze
-  FORCE_UNLISTED = ENV.fetch('FORCE_UNLISTED', '').chomp.split(/,/).freeze
   self.discard_column = :deleted_at
 
   # If `override_timestamps` is set at creation time, Snowflake ID creation
@@ -515,8 +513,6 @@ class Status < ApplicationRecord
   def set_visibility
     self.visibility = reblog.visibility if reblog? && visibility.nil?
     self.visibility = (account.locked? ? :private : :public) if visibility.nil?
-    self.visibility = :unlisted if public_visibility? && account.domain.in?(FORCE_UNLISTED)
-    self.sensitive = true if account.domain.in?(FORCE_SENSITIVE)
     self.sensitive  = false if sensitive.nil?
   end
 
